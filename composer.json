@@ -1,7 +1,7 @@
 {
     "name": "doppiogancio/mocked-client",
     "description": "A simple way to mock a client",
-    "type": "library1",
+    "type": "library",
     "license": "MIT",
     "config": {
         "platform": {
