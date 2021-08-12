@@ -23,8 +23,6 @@ class HandlerStackBuilderTest extends TestCase
         $body = (string) $response->getBody();
         $country = json_decode($body, true);
 
-        print_r($country);
-
         $this->assertEquals('+49', $country['id']);
         $this->assertEquals('DE', $country['code']);
         $this->assertEquals('Germany', $country['name']);
