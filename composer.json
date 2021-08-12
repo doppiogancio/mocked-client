@@ -2,9 +2,10 @@
     "name": "doppiogancio/mocked-client",
     "description": "A simple way to mock a client",
     "type": "composer-plugin",
+    "license": "GPL-3.0-or-later",
     "config": {
         "platform": {
-            "php": "^7.4.0"
+            "php": "7.4"
         }
     },
     "require": {
