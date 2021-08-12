@@ -19,9 +19,11 @@ class HandlerStackBuilderTest extends TestCase
 
     public function testClientWithFileRoute(): void
     {
-        $response = $this->getMockedClient()->request('GET', '/country/IT/json');
+        $response = $this->getMockedClient()->request('GET', '/country/DE/json');
         $body = (string) $response->getBody();
         $country = json_decode($body, true);
+
+        print_r($country);
 
         $this->assertEquals('+49', $country['id']);
         $this->assertEquals('DE', $country['code']);
@@ -50,7 +52,7 @@ class HandlerStackBuilderTest extends TestCase
             }
         );
 
-        $builder->addRouteWithFile('GET',  '/country/IT/json', __DIR__ . '/fixtures/country.json');
+        $builder->addRouteWithFile('GET',  '/country/DE/json', __DIR__ . '/fixtures/country.json');
         $builder->addRouteWithResponse('GET', '/admin/dashboard', new Response(401));
 
         return $builder->buildGuzzleClient();
