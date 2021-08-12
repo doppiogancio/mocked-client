@@ -9,7 +9,7 @@
         }
     },
     "require": {
-        "league/route": "^5.1",
+        "league/route": "^4.5",
         "guzzlehttp/guzzle": "^7.0"
     },
     "require-dev": {
@@ -33,5 +33,8 @@
         "psr-4": {
             "MockedClientTests\\": "tests/"
         }
+    },
+    "scripts": {
+        "test": "phpunit"
     }
 }

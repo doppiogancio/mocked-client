@@ -66,3 +66,9 @@ Via Composer
 ```shell
 $ vendor/bin/phpunit
 ```
+
+or
+
+```shell
+$ composer run-script test
+```
