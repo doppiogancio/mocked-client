@@ -1,7 +1,7 @@
 {
     "name": "doppiogancio/mocked-client",
     "description": "A simple way to mock a client",
-    "type": "composer-plugin",
+    "type": "library1",
     "license": "MIT",
     "config": {
         "platform": {
