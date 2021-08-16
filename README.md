@@ -36,7 +36,7 @@ $builder->addRoute(
 $builder->addRouteWithFile('GET',  '/country/IT/json', __DIR__ . '/fixtures/country.json');
 
 // Add a route with a response in a string
-$builder->addRouteWithString('GET',  '{"id":"+39","code":"IT","name":"Italy"}');
+$builder->addRouteWithString('GET',  '/country/IT', '{"id":"+39","code":"IT","name":"Italy"}');
 
 // Add a route mocking directly the response
 $builder->addRouteWithResponse('GET', '/admin/dashboard', new Response(401));
