@@ -1,0 +1,23 @@
+name: Code review
+on: [push]
+jobs:
+  code-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Composer version
+        run: cd ${{ github.workspace }}
+
+      - name: Composer dependencies
+        run: composer install --no-ansi --no-interaction --no-scripts --no-suggest --no-progress --prefer-dist
+
+      - name: Run phpstan
+        run: ./vendor/bin/phpstan
+
+      - name: Run phpunit
+        run: ./vendor/bin/phpunit
+
+      - name: Run phpcs
+        run: ./vendor/bin/phpcs

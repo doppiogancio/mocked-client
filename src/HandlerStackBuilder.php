@@ -1,43 +1,45 @@
 <?php
 
+declare(strict_types=1);
+
 namespace MockedClient;
 
+use DateTime;
 use GuzzleHttp\Client;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Psr7\Response;
+use GuzzleHttp\Psr7\ServerRequest;
 use League\Route\Http\Exception\NotFoundException;
 use League\Route\Router;
 use MockedClient\Exception\RouteNotFound;
 use Psr\Http\Message\RequestInterface;
-use GuzzleHttp\HandlerStack;
-use GuzzleHttp\Psr7\ServerRequest;
-use GuzzleHttp\Psr7\Response;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Log\LoggerInterface;
+
+use function date;
+use function file_get_contents;
+use function sprintf;
 
 class HandlerStackBuilder
 {
-    /**
-     * @var Route[]
-     */
-    private array $_routes = [];
-    private bool $_debug = false;
+    /** @var Route[] */
+    private array $routes = [];
+    private ?LoggerInterface $logger;
 
-    public function debug(): self
+    public function __construct(?LoggerInterface $logger = null)
     {
-        $this->_debug = true;
-        return $this;
+        $this->logger = $logger;
     }
 
     public function addRoute(string $method, string $path, callable $handler): self
     {
-        $this->_routes[] = new Route($method, $path, $handler);
+        $this->routes[] = new Route($method, $path, $handler);
 
         return $this;
     }
 
-    public function addRouteWithResponse(
-        string $method,
-        string $path,
-        ResponseInterface $response
-    ): self {
+    public function addRouteWithResponse(string $method, string $path, ResponseInterface $response): self
+    {
         $this->addRoute(
             $method,
             $path,
@@ -49,6 +51,11 @@ class HandlerStackBuilder
         return $this;
     }
 
+    /**
+     * @param array<string, string|string[]> $headers
+     *
+     * @return $this
+     */
     public function addRouteWithString(
         string $method,
         string $path,
@@ -56,25 +63,24 @@ class HandlerStackBuilder
         int $httpStatus = 200,
         array $headers = []
     ): self {
-        $this->addRoute(
+        $this->addRouteWithResponse(
             $method,
             $path,
-            static function () use (
+            new Response(
                 $httpStatus,
                 $headers,
                 $responseContent
-            ): ResponseInterface {
-                return new Response(
-                    $httpStatus,
-                    $headers,
-                    $responseContent
-                );
-            }
+            )
         );
 
         return $this;
     }
 
+    /**
+     * @param array<string, string|string[]> $headers
+     *
+     * @return $this
+     */
     public function addRouteWithFile(
         string $method,
         string $path,
@@ -96,9 +102,9 @@ class HandlerStackBuilder
     public function build(): HandlerStack
     {
         return new HandlerStack(
-            function (RequestInterface $request) {
+            function (RequestInterface $request): ResponseInterface {
                 $router = new Router();
-                foreach ($this->_routes as $route) {
+                foreach ($this->routes as $route) {
                     $router->map(
                         $route->getMethod(),
                         $route->getPath(),
@@ -106,12 +112,14 @@ class HandlerStackBuilder
                     );
                 }
 
-                if ($this->_debug) {
-                    print sprintf(
-                        "%s - %s %s\n",
-                        date(\DateTime::W3C),
-                        $request->getMethod(),
-                        $request->getUri()
+                if ($this->logger) {
+                    $this->logger->debug(
+                        sprintf(
+                            "%s - %s %s\n",
+                            date(DateTime::W3C),
+                            $request->getMethod(),
+                            $request->getUri()
+                        )
                     );
                 }
 

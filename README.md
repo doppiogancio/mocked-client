@@ -15,16 +15,6 @@ This version requires a minimum PHP version 7.4
 ```php
 $builder = new HandlerStackBuilder();
 
-/**
- * You can enable the debug mode to see the list of request dispatched by the client
- * 
- * 2021-08-12T06:48:04+00:00 - GET /country/IT
- * 2021-08-12T06:48:04+00:00 - GET /country/IT/json
- * 2021-08-12T06:48:04+00:00 - GET /admin/dashboard
- * 2021-08-12T06:48:04+00:00 - GET /not/existing/route
- */
-$builder->debug();
-
 // Add a route with a response via callback
 $builder->addRoute(
     'GET', '/country/IT', static function (ServerRequestInterface $request): Response {
@@ -36,7 +26,7 @@ $builder->addRoute(
 $builder->addRouteWithFile('GET',  '/country/IT/json', __DIR__ . '/fixtures/country.json');
 
 // Add a route with a response in a string
-$builder->addRouteWithFile('GET',  '{"id":"+39","code":"IT","name":"Italy"}');
+$builder->addRouteWithString('GET',  '/country/IT', '{"id":"+39","code":"IT","name":"Italy"}');
 
 // Add a route mocking directly the response
 $builder->addRouteWithResponse('GET', '/admin/dashboard', new Response(401));
@@ -61,14 +51,6 @@ Array
 )
 ```
 ## Testing
-Via Composer
-
 ```shell
-$ vendor/bin/phpunit
-```
-
-or
-
-```shell
-$ composer run-script test
+$ composer run tests
 ```

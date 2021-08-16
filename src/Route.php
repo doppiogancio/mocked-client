@@ -1,36 +1,42 @@
 <?php
 
+declare(strict_types=1);
+
 namespace MockedClient;
+
+use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
 
 class Route
 {
-    private string $_method;
-    private string $_method2;
-    private string $_path;
-    /**
-     * @var callable
-     */
-    private $_handler;
+    private string $method;
+    private string $path;
 
+    /** @var callable(RequestInterface, array): ResponseInterface */
+    private $handler;
+
+    /**
+     * @param callable(RequestInterface, array): ResponseInterface $handler
+     */
     public function __construct(string $method, string $path, callable $handler)
     {
-        $this->_method = $method;
-        $this->_path = $path;
-        $this->_handler = $handler;
+        $this->method  = $method;
+        $this->path    = $path;
+        $this->handler = $handler;
     }
 
     public function getMethod(): string
     {
-        return $this->_method;
+        return $this->method;
     }
 
     public function getPath(): string
     {
-        return $this->_path;
+        return $this->path;
     }
 
     public function getHandler(): callable
     {
-        return $this->_handler;
+        return $this->handler;
     }
 }

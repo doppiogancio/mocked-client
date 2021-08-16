@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace MockedClientTests;
 
 use GuzzleHttp\Client;
@@ -8,20 +10,22 @@ use MockedClient\HandlerStackBuilder;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
 
+use function json_decode;
+
 class HandlerStackBuilderTest extends TestCase
 {
     public function testClientWithBaseRoute(): void
     {
         $response = $this->getMockedClient()->request('GET', '/country/IT');
-        $body = (string) $response->getBody();
+        $body     = (string) $response->getBody();
         $this->assertEquals('{"id":"+39","code":"IT","name":"Italy"}', $body);
     }
 
     public function testClientWithFileRoute(): void
     {
         $response = $this->getMockedClient()->request('GET', '/country/DE/json');
-        $body = (string) $response->getBody();
-        $country = json_decode($body, true);
+        $body     = (string) $response->getBody();
+        $country  = json_decode($body, true);
 
         $this->assertEquals('+49', $country['id']);
         $this->assertEquals('DE', $country['code']);
@@ -43,14 +47,15 @@ class HandlerStackBuilderTest extends TestCase
     private function getMockedClient(): Client
     {
         $builder = new HandlerStackBuilder();
-        $builder->debug();
         $builder->addRoute(
-            'GET', '/country/IT', static function (ServerRequestInterface $request): Response {
+            'GET',
+            '/country/IT',
+            static function (ServerRequestInterface $request): Response {
                 return new Response(200, [], '{"id":"+39","code":"IT","name":"Italy"}');
             }
         );
 
-        $builder->addRouteWithFile('GET',  '/country/DE/json', __DIR__ . '/fixtures/country.json');
+        $builder->addRouteWithFile('GET', '/country/DE/json', __DIR__ . '/fixtures/country.json');
         $builder->addRouteWithResponse('GET', '/admin/dashboard', new Response(401));
 
         return $builder->buildGuzzleClient();
