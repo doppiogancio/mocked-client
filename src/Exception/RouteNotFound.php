@@ -1,8 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace MockedClient\Exception;
 
 use Exception;
+
+use function sprintf;
 
 class RouteNotFound extends Exception
 {
