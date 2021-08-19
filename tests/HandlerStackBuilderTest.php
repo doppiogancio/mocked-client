@@ -6,7 +6,9 @@ namespace MockedClientTests;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Response;
-use MockedClient\HandlerStackBuilder;
+use Http\Discovery\Psr17FactoryDiscovery;
+use MockedClient\HandlerBuilder;
+use MockedClient\MockedGuzzleClientBuilder;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
 
@@ -46,8 +48,13 @@ class HandlerStackBuilderTest extends TestCase
 
     private function getMockedClient(): Client
     {
-        $builder = new HandlerStackBuilder();
-        $builder->addRoute(
+        $handlerBuilder = new HandlerBuilder(
+            Psr17FactoryDiscovery::findResponseFactory(),
+            Psr17FactoryDiscovery::findServerRequestFactory(),
+            Psr17FactoryDiscovery::findStreamFactory(),
+        );
+
+        $handlerBuilder->addRoute(
             'GET',
             '/country/IT',
             static function (ServerRequestInterface $request): Response {
@@ -55,9 +62,11 @@ class HandlerStackBuilderTest extends TestCase
             }
         );
 
-        $builder->addRouteWithFile('GET', '/country/DE/json', __DIR__ . '/fixtures/country.json');
-        $builder->addRouteWithResponse('GET', '/admin/dashboard', new Response(401));
+        $handlerBuilder->addRouteWithFile('GET', '/country/DE/json', __DIR__ . '/fixtures/country.json');
+        $handlerBuilder->addRouteWithResponse('GET', '/admin/dashboard', new Response(401));
 
-        return $builder->buildGuzzleClient();
+        $clientBuilder = new MockedGuzzleClientBuilder($handlerBuilder);
+
+        return $clientBuilder->buildGuzzleClient();
     }
 }
