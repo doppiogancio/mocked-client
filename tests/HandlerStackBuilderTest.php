@@ -67,6 +67,6 @@ class HandlerStackBuilderTest extends TestCase
 
         $clientBuilder = new MockedGuzzleClientBuilder($handlerBuilder);
 
-        return $clientBuilder->buildGuzzleClient();
+        return $clientBuilder->build();
     }
 }

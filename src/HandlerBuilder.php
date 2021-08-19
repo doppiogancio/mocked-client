@@ -8,6 +8,7 @@ use DateTime;
 use League\Route\Http\Exception\NotFoundException;
 use League\Route\Router;
 use MockedClient\Exception\RouteNotFound;
+use Psr\Http\Message\MessageInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -15,8 +16,10 @@ use Psr\Http\Message\ServerRequestFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Log\LoggerInterface;
 
+use function assert;
 use function date;
 use function fopen;
+use function is_resource;
 use function sprintf;
 
 class HandlerBuilder
@@ -92,9 +95,9 @@ class HandlerBuilder
      *
      * @return T
      *
-     * @template T
+     * @template T of MessageInterface
      */
-    private function addHeaders($message, array $headers)
+    private function addHeaders(MessageInterface $message, array $headers): MessageInterface
     {
         foreach ($headers as $header => $value) {
             $message = $message->withHeader($header, $value);
@@ -115,9 +118,11 @@ class HandlerBuilder
         int $httpStatus = 200,
         array $headers = []
     ): self {
+        $fp = fopen($file, 'rb');
+        assert(is_resource($fp));
         $response = $this->responseFactory
             ->createResponse($httpStatus)
-            ->withBody($this->streamFactory->createStreamFromResource(fopen($file, 'rb')));
+            ->withBody($this->streamFactory->createStreamFromResource($fp));
 
         $response = $this->addHeaders($response, $headers);
         $this->addRouteWithResponse($method, $path, $response);
@@ -125,6 +130,9 @@ class HandlerBuilder
         return $this;
     }
 
+    /**
+     * @return callable(RequestInterface): ResponseInterface
+     */
     public function build(): callable
     {
         return function (RequestInterface $request): ResponseInterface {
