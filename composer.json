@@ -3,17 +3,19 @@
     "description": "A simple way to mock a client",
     "type": "library",
     "license": "MIT",
-    "config": {
-        "platform": {
-            "php": "7.4"
-        }
-    },
     "require": {
+        "php": "^7.4|^8.0",
         "league/route": ">=4.5",
-        "guzzlehttp/guzzle": "^6.0|^7.0",
-        "psr/log": "^1.0|^2.0|^3.0"
+
+        "psr/log": "^1.0|^2.0|^3.0",
+        "psr/http-factory": "^1.0",
+
+        "psr/http-factory-implementation": "^1.0",
+        "psr/http-message-implementation": "^1.0"
     },
     "require-dev": {
+        "php-http/discovery": "^1.13",
+        "guzzlehttp/guzzle": "^6.0|^7.0",
         "phpunit/phpunit": "^9.5",
         "squizlabs/php_codesniffer": "*",
         "slevomat/coding-standard": "^7.0",
@@ -28,12 +30,12 @@
     ],
     "autoload": {
         "psr-4": {
-            "MockedClient\\": "src/"
+            "DoppioGancio\\MockedClient\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "MockedClientTests\\": "tests/"
+            "DoppioGancio\\MockedClientTests\\": "tests/"
         }
     },
     "scripts": {

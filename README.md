@@ -5,15 +5,32 @@ A simple way to mock a client
 Via Composer
 
 ```shell
-$ composer require doppiogancio/mocked-client
+$ composer require doppiogancio/mocked-client guzzlehttp/guzzle php-http/discovery
 ```
+
+Note:
+- The package `guzzlehttp/guzzle` is not required, 
+  this package is compatible any http client that supports the PSR request/responses  
+- The package `php-http/discovery` is not required, it is used to auto-discover the needed PSR factories
+  (if you prefer you can provide the needed PSR factories manually)
 
 ## Requirements
 This version requires a minimum PHP version 7.4
 
 ## Usage - Mocking the client
 ```php
-$builder = new HandlerStackBuilder();
+
+use GuzzleHttp\Client;
+use Http\Discovery\Psr17FactoryDiscovery;
+use MockedClient\HandlerBuilder;
+use MockedClient\MockedGuzzleClientBuilder;
+// ... more imports
+
+$builder = new HandlerBuilder(
+    Psr17FactoryDiscovery::findResponseFactory(),
+    Psr17FactoryDiscovery::findServerRequestFactory(),
+    Psr17FactoryDiscovery::findStreamFactory(),
+);
 
 // Add a route with a response via callback
 $builder->addRoute(
@@ -31,7 +48,8 @@ $builder->addRouteWithString('GET',  '/country/IT', '{"id":"+39","code":"IT","na
 // Add a route mocking directly the response
 $builder->addRouteWithResponse('GET', '/admin/dashboard', new Response(401));
 
-$client = new Client(['handler' => $builder->build()]);
+$clientBuilder = new MockedGuzzleClientBuilder($builder);
+$client = $clientBuilder->build();
 ```
 
 ## Usage - Using the mocked client

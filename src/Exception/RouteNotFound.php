@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace MockedClient\Exception;
+namespace DoppioGancio\MockedClient\Exception;
 
 use Exception;
 
