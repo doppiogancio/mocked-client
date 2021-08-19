@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace MockedClient;
+namespace DoppioGancio\MockedClient;
 
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;

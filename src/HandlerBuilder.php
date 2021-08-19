@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace MockedClient;
+namespace DoppioGancio\MockedClient;
 
 use DateTime;
+use DoppioGancio\MockedClient\Exception\RouteNotFound;
 use League\Route\Http\Exception\NotFoundException;
 use League\Route\Router;
-use MockedClient\Exception\RouteNotFound;
 use Psr\Http\Message\MessageInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseFactoryInterface;

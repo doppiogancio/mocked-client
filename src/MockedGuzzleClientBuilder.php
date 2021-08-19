@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace MockedClient;
+namespace DoppioGancio\MockedClient;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\HandlerStack;

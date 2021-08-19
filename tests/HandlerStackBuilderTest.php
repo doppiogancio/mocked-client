@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace MockedClientTests;
+namespace DoppioGancio\MockedClientTests;
 
+use DoppioGancio\MockedClient\HandlerBuilder;
+use DoppioGancio\MockedClient\MockedGuzzleClientBuilder;
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Response;
 use Http\Discovery\Psr17FactoryDiscovery;
-use MockedClient\HandlerBuilder;
-use MockedClient\MockedGuzzleClientBuilder;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
 

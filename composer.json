@@ -30,12 +30,12 @@
     ],
     "autoload": {
         "psr-4": {
-            "MockedClient\\": "src/"
+            "DoppioGancio\\MockedClient\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "MockedClientTests\\": "tests/"
+            "DoppioGancio\\MockedClientTests\\": "tests/"
         }
     },
     "scripts": {
