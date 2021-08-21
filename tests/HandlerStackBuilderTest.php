@@ -11,16 +11,27 @@ use GuzzleHttp\Psr7\Response;
 use Http\Discovery\Psr17FactoryDiscovery;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Log\Test\TestLogger;
 
 use function json_decode;
 
 class HandlerStackBuilderTest extends TestCase
 {
+    private TestLogger $logger;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->logger = new TestLogger();
+    }
+
     public function testClientWithBaseRoute(): void
     {
         $response = $this->getMockedClient()->request('GET', '/country/IT');
         $body     = (string) $response->getBody();
         $this->assertEquals('{"id":"+39","code":"IT","name":"Italy"}', $body);
+
+        $this->assertTrue($this->logger->hasDebugThatContains('GET /country/IT'));
     }
 
     public function testClientWithFileRoute(): void
@@ -44,6 +55,9 @@ class HandlerStackBuilderTest extends TestCase
     {
         $this->expectExceptionMessage('Mocked route GET /not/existing/route not found');
         $this->getMockedClient()->request('GET', '/not/existing/route');
+        $this->assertTrue(
+            $this->logger->hasErrorThatContains('League\Route\Http\Exception\NotFoundException Not Found')
+        );
     }
 
     private function getMockedClient(): Client
@@ -52,6 +66,7 @@ class HandlerStackBuilderTest extends TestCase
             Psr17FactoryDiscovery::findResponseFactory(),
             Psr17FactoryDiscovery::findServerRequestFactory(),
             Psr17FactoryDiscovery::findStreamFactory(),
+            $this->logger
         );
 
         $handlerBuilder->addRoute(
@@ -65,7 +80,7 @@ class HandlerStackBuilderTest extends TestCase
         $handlerBuilder->addRouteWithFile('GET', '/country/DE/json', __DIR__ . '/fixtures/country.json');
         $handlerBuilder->addRouteWithResponse('GET', '/admin/dashboard', new Response(401));
 
-        $clientBuilder = new MockedGuzzleClientBuilder($handlerBuilder);
+        $clientBuilder = new MockedGuzzleClientBuilder($handlerBuilder, $this->logger);
 
         return $clientBuilder->build();
     }

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace DoppioGancio\MockedClient;
 
-use DateTime;
 use DoppioGancio\MockedClient\Exception\RouteNotFound;
 use League\Route\Http\Exception\NotFoundException;
 use League\Route\Router;
@@ -15,12 +14,11 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Log\LoggerInterface;
+use Throwable;
 
 use function assert;
-use function date;
 use function fopen;
 use function is_resource;
-use function sprintf;
 
 class HandlerBuilder
 {
@@ -35,16 +33,25 @@ class HandlerBuilder
 
     private ServerRequestFactoryInterface $serverRequestFactory;
 
+    private MessageFormatterInterface $messageFormatter;
+
     public function __construct(
         ResponseFactoryInterface $responseFactory,
         ServerRequestFactoryInterface $serverRequestFactory,
         StreamFactoryInterface $streamFactory,
-        ?LoggerInterface $logger = null
+        ?LoggerInterface $logger = null,
+        ?MessageFormatterInterface $messageFormatter = null,
     ) {
         $this->responseFactory      = $responseFactory;
         $this->streamFactory        = $streamFactory;
         $this->serverRequestFactory = $serverRequestFactory;
         $this->logger               = $logger;
+        $this->messageFormatter     = new MessageFormatter();
+        if ($messageFormatter === null) {
+            return;
+        }
+
+        $this->messageFormatter = $messageFormatter;
     }
 
     public function addRoute(string $method, string $path, callable $handler): self
@@ -145,28 +152,54 @@ class HandlerBuilder
                 );
             }
 
-            if ($this->logger) {
-                $this->logger->debug(
-                    sprintf(
-                        "%s - %s %s\n",
-                        date(DateTime::W3C),
-                        $request->getMethod(),
-                        $request->getUri()
-                    )
-                );
-            }
+            $this->logDebug(
+                $this->messageFormatter->formatRequest($request)
+            );
 
             $serverRequest = $this->serverRequestFactory
                 ->createServerRequest($request->getMethod(), $request->getUri());
 
             try {
-                return $router->dispatch($serverRequest);
+                $response = $router->dispatch($serverRequest);
+                $this->logDebug(
+                    $this->messageFormatter->formatResponse($response)
+                );
+
+                return $response;
             } catch (NotFoundException $e) {
+                $this->logError(
+                    $this->messageFormatter->formatException($e)
+                );
+
                 throw new RouteNotFound(
                     $request->getMethod(),
                     $request->getUri()->getPath()
                 );
+            } catch (Throwable $e) {
+                $this->logError(
+                    $this->messageFormatter->formatException($e)
+                );
+
+                throw $e;
             }
         };
+    }
+
+    private function logDebug(string $message): void
+    {
+        if (! $this->logger) {
+            return;
+        }
+
+        $this->logger->debug($message);
+    }
+
+    private function logError(string $message): void
+    {
+        if (! $this->logger) {
+            return;
+        }
+
+        $this->logger->error($message);
     }
 }

@@ -20,7 +20,8 @@
         "squizlabs/php_codesniffer": "*",
         "slevomat/coding-standard": "^7.0",
         "phpstan/phpstan": "^0.12.94",
-        "doctrine/coding-standard": "^9.0"
+        "doctrine/coding-standard": "^9.0",
+        "monolog/monolog": "^2.3"
     },
     "authors": [
         {
