@@ -7,37 +7,24 @@ namespace DoppioGancio\MockedClient;
 use GuzzleHttp\Client;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\MessageFormatter;
-use GuzzleHttp\MessageFormatterInterface;
 use GuzzleHttp\Middleware;
 use GuzzleHttp\Promise\FulfilledPromise;
 use GuzzleHttp\Promise\PromiseInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 class MockedGuzzleClientBuilder
 {
     private HandlerBuilder $handlerBuilder;
-    private ?LoggerInterface $logger;
-    private MessageFormatterInterface $messageFormatter;
+    private LoggerInterface $logger;
 
     public function __construct(
         HandlerBuilder $handlerBuilder,
-        ?LoggerInterface $logger = null,
-        ?MessageFormatterInterface $messageFormatter = null
+        ?LoggerInterface $logger = null
     ) {
         $this->handlerBuilder = $handlerBuilder;
-        $this->logger         = $logger;
-
-        $this->messageFormatter = new MessageFormatter(
-            '{method} {uri} HTTP/{version} HEADERS: {req_headers} ' .
-            'Payload: {req_body} RESPONSE: STATUS: {code} BODY: {res_body}'
-        );
-
-        if ($messageFormatter === null) {
-            return;
-        }
-
-        $this->messageFormatter = $messageFormatter;
+        $this->logger         = $logger ?? new NullLogger();
     }
 
     public function build(): Client
@@ -53,7 +40,7 @@ class MockedGuzzleClientBuilder
         if ($this->logger !== null) {
             $handlerStack->push(Middleware::log(
                 $this->logger,
-                $this->messageFormatter,
+                new MessageFormatter()
             ));
         }
 

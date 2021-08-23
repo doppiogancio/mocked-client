@@ -14,18 +14,20 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Throwable;
 
 use function assert;
 use function fopen;
 use function is_resource;
+use function sprintf;
 
 class HandlerBuilder
 {
     /** @var Route[] */
     private array $routes = [];
 
-    private ?LoggerInterface $logger;
+    private LoggerInterface $logger;
 
     private StreamFactoryInterface $streamFactory;
 
@@ -33,25 +35,16 @@ class HandlerBuilder
 
     private ServerRequestFactoryInterface $serverRequestFactory;
 
-    private MessageFormatterInterface $messageFormatter;
-
     public function __construct(
         ResponseFactoryInterface $responseFactory,
         ServerRequestFactoryInterface $serverRequestFactory,
         StreamFactoryInterface $streamFactory,
-        ?LoggerInterface $logger = null,
-        ?MessageFormatterInterface $messageFormatter = null,
+        ?LoggerInterface $logger = null
     ) {
         $this->responseFactory      = $responseFactory;
         $this->streamFactory        = $streamFactory;
         $this->serverRequestFactory = $serverRequestFactory;
-        $this->logger               = $logger;
-        $this->messageFormatter     = new MessageFormatter();
-        if ($messageFormatter === null) {
-            return;
-        }
-
-        $this->messageFormatter = $messageFormatter;
+        $this->logger               = $logger ?? new NullLogger();
     }
 
     public function addRoute(string $method, string $path, callable $handler): self
@@ -152,8 +145,9 @@ class HandlerBuilder
                 );
             }
 
-            $this->logDebug(
-                $this->messageFormatter->formatRequest($request)
+            $this->logger->debug(
+                sprintf('Request: %s %s', $request->getMethod(), $request->getUri()),
+                ['request' => $request]
             );
 
             $serverRequest = $this->serverRequestFactory
@@ -161,45 +155,40 @@ class HandlerBuilder
 
             try {
                 $response = $router->dispatch($serverRequest);
-                $this->logDebug(
-                    $this->messageFormatter->formatResponse($response)
+                $this->logger->debug(
+                    sprintf(
+                        'Response: %d %s %s',
+                        $response->getStatusCode(),
+                        $request->getMethod(),
+                        $request->getUri()
+                    ),
+                    [
+                        'request' => $request,
+                        'response' => $response,
+                    ]
                 );
 
                 return $response;
             } catch (NotFoundException $e) {
-                $this->logError(
-                    $this->messageFormatter->formatException($e)
-                );
+                $this->logError($e, $request);
 
                 throw new RouteNotFound(
                     $request->getMethod(),
                     $request->getUri()->getPath()
                 );
             } catch (Throwable $e) {
-                $this->logError(
-                    $this->messageFormatter->formatException($e)
-                );
+                $this->logError($e, $request);
 
                 throw $e;
             }
         };
     }
 
-    private function logDebug(string $message): void
+    private function logError(Throwable $e, RequestInterface $request): void
     {
-        if (! $this->logger) {
-            return;
-        }
-
-        $this->logger->debug($message);
-    }
-
-    private function logError(string $message): void
-    {
-        if (! $this->logger) {
-            return;
-        }
-
-        $this->logger->error($message);
+        $this->logger->error($e->getMessage(), [
+            'exception' => $e,
+            'request' => $request,
+        ]);
     }
 }
