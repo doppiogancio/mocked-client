@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace DoppioGancio\MockedClient;
 
-use DateTime;
 use DoppioGancio\MockedClient\Exception\RouteNotFound;
 use League\Route\Http\Exception\NotFoundException;
 use League\Route\Router;
@@ -15,9 +14,10 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
+use Throwable;
 
 use function assert;
-use function date;
 use function fopen;
 use function is_resource;
 use function sprintf;
@@ -27,7 +27,7 @@ class HandlerBuilder
     /** @var Route[] */
     private array $routes = [];
 
-    private ?LoggerInterface $logger;
+    private LoggerInterface $logger;
 
     private StreamFactoryInterface $streamFactory;
 
@@ -44,7 +44,7 @@ class HandlerBuilder
         $this->responseFactory      = $responseFactory;
         $this->streamFactory        = $streamFactory;
         $this->serverRequestFactory = $serverRequestFactory;
-        $this->logger               = $logger;
+        $this->logger               = $logger ?? new NullLogger();
     }
 
     public function addRoute(string $method, string $path, callable $handler): self
@@ -145,28 +145,50 @@ class HandlerBuilder
                 );
             }
 
-            if ($this->logger) {
-                $this->logger->debug(
-                    sprintf(
-                        "%s - %s %s\n",
-                        date(DateTime::W3C),
-                        $request->getMethod(),
-                        $request->getUri()
-                    )
-                );
-            }
+            $this->logger->debug(
+                sprintf('Request: %s %s', $request->getMethod(), $request->getUri()),
+                ['request' => $request]
+            );
 
             $serverRequest = $this->serverRequestFactory
                 ->createServerRequest($request->getMethod(), $request->getUri());
 
             try {
-                return $router->dispatch($serverRequest);
+                $response = $router->dispatch($serverRequest);
+                $this->logger->debug(
+                    sprintf(
+                        'Response: %d %s %s',
+                        $response->getStatusCode(),
+                        $request->getMethod(),
+                        $request->getUri()
+                    ),
+                    [
+                        'request' => $request,
+                        'response' => $response,
+                    ]
+                );
+
+                return $response;
             } catch (NotFoundException $e) {
+                $this->logError($e, $request);
+
                 throw new RouteNotFound(
                     $request->getMethod(),
                     $request->getUri()->getPath()
                 );
+            } catch (Throwable $e) {
+                $this->logError($e, $request);
+
+                throw $e;
             }
         };
+    }
+
+    private function logError(Throwable $e, RequestInterface $request): void
+    {
+        $this->logger->error($e->getMessage(), [
+            'exception' => $e,
+            'request' => $request,
+        ]);
     }
 }
