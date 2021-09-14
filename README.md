@@ -17,7 +17,7 @@ Note:
 ## Requirements
 This version requires a minimum PHP version 7.4
 
-## Usage - Mocking the client
+## How to mock a client
 ```php
 
 use GuzzleHttp\Client;
@@ -51,8 +51,12 @@ $builder->addRouteWithResponse('GET', '/admin/dashboard', new Response(401));
 $clientBuilder = new MockedGuzzleClientBuilder($builder);
 $client = $clientBuilder->build();
 ```
+## How to inject the mocked client in Symfony
+```php
+...
+```
 
-## Usage - Using the mocked client
+## How to use the client
 ```php
 $response = $client->request('GET', '/country/DE/json');
 $body = (string) $response->getBody();
@@ -68,7 +72,36 @@ Array
     [name] => Germany
 )
 ```
-## Testing
+
+## Some recommendations...
+If you are testing a component that uses a client, don't worry, instantiate a mocked client without routes.
+```php
+$builder = new HandlerBuilder(
+    Psr17FactoryDiscovery::findResponseFactory(),
+    Psr17FactoryDiscovery::findServerRequestFactory(),
+    Psr17FactoryDiscovery::findStreamFactory(),
+);
+
+// Add here the routes ...
+
+$clientBuilder = new MockedGuzzleClientBuilder($builder);
+$client = $clientBuilder->build();
+```
+
+inject it in the kernel container if needed
+```php
+self::$container->set('eight_points_guzzle.client.william', $client);
+```
+
+Run the test: the test will fail, but it will suggest you the route that is missing. 
+By doing this, it will only specify the needed routes.
+
+An example:
 ```shell
-$ composer run tests
+DoppioGancio\MockedClient\Exception\RouteNotFound : Mocked route GET /admin/dashboard not found
+```
+
+To mock for example an error response:
+```php
+$handlerBuilder->addRouteWithResponse('GET', '/admin/dashboard', new Response(401));
 ```
