@@ -19,41 +19,61 @@ This version requires a minimum PHP version 7.4
 
 ## How to mock a client
 ```php
-
+use DoppioGancio\MockedClient\HandlerBuilder;
+use DoppioGancio\MockedClient\MockedGuzzleClientBuilder;
+use DoppioGancio\MockedClient\Route\ConditionalRouteBuilder;
+use DoppioGancio\MockedClient\Route\RouteBuilder;
 use GuzzleHttp\Client;
+use GuzzleHttp\Psr7\Response;
 use Http\Discovery\Psr17FactoryDiscovery;
-use MockedClient\HandlerBuilder;
-use MockedClient\MockedGuzzleClientBuilder;
 // ... more imports
 
-$builder = new HandlerBuilder(
-    Psr17FactoryDiscovery::findResponseFactory(),
+$handlerBuilder = new HandlerBuilder(
     Psr17FactoryDiscovery::findServerRequestFactory(),
+);
+
+$cb = new ConditionalRouteBuilder(
+    Psr17FactoryDiscovery::findResponseFactory(),
     Psr17FactoryDiscovery::findStreamFactory(),
 );
 
-// Add a route with a response via callback
-$builder->addRoute(
-    'GET', '/country/IT', static function (ServerRequestInterface $request): Response {
-        return new Response(200, [], '{"id":"+39","code":"IT","name":"Italy"}');
-    }
+$rb = new RouteBuilder(
+    Psr17FactoryDiscovery::findResponseFactory(),
+    Psr17FactoryDiscovery::findStreamFactory(),
 );
 
-// Add a route with a response in a text file
-$builder->addRouteWithFile('GET',  '/country/IT/json', __DIR__ . '/fixtures/country.json');
+// Route with Response
+$handlerBuilder->addRoute(
+    $rb->new()
+        ->withMethod('GET')
+        ->withPath('/country/IT')
+        ->withResponse(new Response(200, [], '{"id":"+39","code":"IT","name":"Italy"}'))
+        ->build()
+);
 
-// Add a route with a response in a string
-$builder->addRouteWithString('GET',  '/country/IT', '{"id":"+39","code":"IT","name":"Italy"}');
+// Route with File
+$handlerBuilder->addRoute(
+    $rb->new()
+        ->withMethod('GET')
+        ->withPath('/country/DE/json')
+        ->withFileResponse(__DIR__ . '/fixtures/country.json')
+        ->build()
+);
 
-// Add a route mocking directly the response
-$builder->addRouteWithResponse('GET', '/admin/dashboard', new Response(401));
+// Route with Conditional responses
+$handlerBuilder->addRoute(
+    $cb->new()
+        ->withMethod('GET')
+        ->withPath('/country/')
+        ->withConditionalResponse('code=de', new Response(200, [], '{"id":"+49","code":"DE","name":"Germany"}'))
+        ->withConditionalFileResponse('code=it', __DIR__ . '/../fixtures/country_it.json')
+        ->withConditionalStringResponse('code=fr', '{"id":"+33","code":"FR","name":"France"}')
+        ->build()
+);
 
-$clientBuilder = new MockedGuzzleClientBuilder($builder);
-$client = $clientBuilder->build();
-```
-## How to inject the mocked client in Symfony
-```php
-...
+$clientBuilder = new MockedGuzzleClientBuilder($handlerBuilder);
+
+return $clientBuilder->build();
 ```
 
 ## How to use the client

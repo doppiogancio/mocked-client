@@ -12,6 +12,7 @@ use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
 
 use function assert;
+use function json_decode;
 
 class ConditionalRouteBuilderTest extends TestCase
 {
@@ -51,5 +52,29 @@ class ConditionalRouteBuilderTest extends TestCase
         $response = $route->getHandler()(new Request('GET', '/country?nonce=12345&code=fr&page=3'));
         assert($response instanceof ResponseInterface);
         $this->assertEquals(123, $response->getStatusCode());
+    }
+
+    public function testQueryStringWithArrayNotation(): void
+    {
+        $builder = new ConditionalRouteBuilder(
+            Psr17FactoryDiscovery::findResponseFactory(),
+            Psr17FactoryDiscovery::findStreamFactory(),
+        );
+
+        $route = $builder->withMethod('GET')
+            ->withPath('/manufacturers')
+            ->withConditionalFileResponse(
+                'filters%5BhasContent%5D=1',
+                __DIR__ . '/../fixtures/api_parts_manufacturers.json'
+            )
+            ->build();
+
+        $response = $route->getHandler()(new Request('GET', '/manufacturers?filters[hasContent]=1'));
+        assert($response instanceof ResponseInterface);
+        $this->assertEquals(200, $response->getStatusCode());
+
+        assert($response instanceof ResponseInterface);
+        $data = json_decode($response->getBody()->getContents(), true);
+        $this->assertCount(2, $data['manufacturers']);
     }
 }
