@@ -17,42 +17,66 @@ Note:
 ## Requirements
 This version requires a minimum PHP version 7.4
 
-## Usage - Mocking the client
+## How to mock a client
 ```php
-
+use DoppioGancio\MockedClient\HandlerBuilder;
+use DoppioGancio\MockedClient\MockedGuzzleClientBuilder;
+use DoppioGancio\MockedClient\Route\ConditionalRouteBuilder;
+use DoppioGancio\MockedClient\Route\RouteBuilder;
 use GuzzleHttp\Client;
+use GuzzleHttp\Psr7\Response;
 use Http\Discovery\Psr17FactoryDiscovery;
-use MockedClient\HandlerBuilder;
-use MockedClient\MockedGuzzleClientBuilder;
 // ... more imports
 
-$builder = new HandlerBuilder(
-    Psr17FactoryDiscovery::findResponseFactory(),
+$handlerBuilder = new HandlerBuilder(
     Psr17FactoryDiscovery::findServerRequestFactory(),
+);
+
+$cb = new ConditionalRouteBuilder(
+    Psr17FactoryDiscovery::findResponseFactory(),
     Psr17FactoryDiscovery::findStreamFactory(),
 );
 
-// Add a route with a response via callback
-$builder->addRoute(
-    'GET', '/country/IT', static function (ServerRequestInterface $request): Response {
-        return new Response(200, [], '{"id":"+39","code":"IT","name":"Italy"}');
-    }
+$rb = new RouteBuilder(
+    Psr17FactoryDiscovery::findResponseFactory(),
+    Psr17FactoryDiscovery::findStreamFactory(),
 );
 
-// Add a route with a response in a text file
-$builder->addRouteWithFile('GET',  '/country/IT/json', __DIR__ . '/fixtures/country.json');
+// Route with Response
+$handlerBuilder->addRoute(
+    $rb->new()
+        ->withMethod('GET')
+        ->withPath('/country/IT')
+        ->withResponse(new Response(200, [], '{"id":"+39","code":"IT","name":"Italy"}'))
+        ->build()
+);
 
-// Add a route with a response in a string
-$builder->addRouteWithString('GET',  '/country/IT', '{"id":"+39","code":"IT","name":"Italy"}');
+// Route with File
+$handlerBuilder->addRoute(
+    $rb->new()
+        ->withMethod('GET')
+        ->withPath('/country/DE/json')
+        ->withFileResponse(__DIR__ . '/fixtures/country.json')
+        ->build()
+);
 
-// Add a route mocking directly the response
-$builder->addRouteWithResponse('GET', '/admin/dashboard', new Response(401));
+// Route with Conditional responses
+$handlerBuilder->addRoute(
+    $cb->new()
+        ->withMethod('GET')
+        ->withPath('/country/')
+        ->withConditionalResponse('code=de', new Response(200, [], '{"id":"+49","code":"DE","name":"Germany"}'))
+        ->withConditionalFileResponse('code=it', __DIR__ . '/../fixtures/country_it.json')
+        ->withConditionalStringResponse('code=fr', '{"id":"+33","code":"FR","name":"France"}')
+        ->build()
+);
 
-$clientBuilder = new MockedGuzzleClientBuilder($builder);
-$client = $clientBuilder->build();
+$clientBuilder = new MockedGuzzleClientBuilder($handlerBuilder);
+
+return $clientBuilder->build();
 ```
 
-## Usage - Using the mocked client
+## How to use the client
 ```php
 $response = $client->request('GET', '/country/DE/json');
 $body = (string) $response->getBody();
@@ -68,7 +92,36 @@ Array
     [name] => Germany
 )
 ```
-## Testing
+
+## Some recommendations...
+If you are testing a component that uses a client, don't worry, instantiate a mocked client without routes.
+```php
+$builder = new HandlerBuilder(
+    Psr17FactoryDiscovery::findResponseFactory(),
+    Psr17FactoryDiscovery::findServerRequestFactory(),
+    Psr17FactoryDiscovery::findStreamFactory(),
+);
+
+// Add here the routes ...
+
+$clientBuilder = new MockedGuzzleClientBuilder($builder);
+$client = $clientBuilder->build();
+```
+
+inject it in the kernel container if needed
+```php
+self::$container->set('eight_points_guzzle.client.william', $client);
+```
+
+Run the test: the test will fail, but it will suggest you the route that is missing. 
+By doing this, it will only specify the needed routes.
+
+An example:
 ```shell
-$ composer run tests
+DoppioGancio\MockedClient\Exception\RouteNotFound : Mocked route GET /admin/dashboard not found
+```
+
+To mock for example an error response:
+```php
+$handlerBuilder->addRouteWithResponse('GET', '/admin/dashboard', new Response(401));
 ```

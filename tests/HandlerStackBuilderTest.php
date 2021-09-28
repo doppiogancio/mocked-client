@@ -2,15 +2,16 @@
 
 declare(strict_types=1);
 
-namespace DoppioGancio\MockedClientTests;
+namespace DoppioGancio\MockedClient\Tests;
 
 use DoppioGancio\MockedClient\HandlerBuilder;
 use DoppioGancio\MockedClient\MockedGuzzleClientBuilder;
+use DoppioGancio\MockedClient\Route\ConditionalRouteBuilder;
+use DoppioGancio\MockedClient\Route\RouteBuilder;
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Response;
 use Http\Discovery\Psr17FactoryDiscovery;
 use PHPUnit\Framework\TestCase;
-use Psr\Http\Message\ServerRequestInterface;
 
 use function json_decode;
 
@@ -19,6 +20,13 @@ class HandlerStackBuilderTest extends TestCase
     public function testClientWithBaseRoute(): void
     {
         $response = $this->getMockedClient()->request('GET', '/country/IT');
+        $body     = (string) $response->getBody();
+        $this->assertEquals('{"id":"+39","code":"IT","name":"Italy"}', $body);
+    }
+
+    public function testClientWithQueryStrings(): void
+    {
+        $response = $this->getMockedClient()->request('GET', '/country/?page=1&code=it');
         $body     = (string) $response->getBody();
         $this->assertEquals('{"id":"+39","code":"IT","name":"Italy"}', $body);
     }
@@ -49,21 +57,51 @@ class HandlerStackBuilderTest extends TestCase
     private function getMockedClient(): Client
     {
         $handlerBuilder = new HandlerBuilder(
-            Psr17FactoryDiscovery::findResponseFactory(),
             Psr17FactoryDiscovery::findServerRequestFactory(),
+        );
+
+        $cb = new ConditionalRouteBuilder(
+            Psr17FactoryDiscovery::findResponseFactory(),
+            Psr17FactoryDiscovery::findStreamFactory(),
+        );
+
+        $rb = new RouteBuilder(
+            Psr17FactoryDiscovery::findResponseFactory(),
             Psr17FactoryDiscovery::findStreamFactory(),
         );
 
         $handlerBuilder->addRoute(
-            'GET',
-            '/country/IT',
-            static function (ServerRequestInterface $request): Response {
-                return new Response(200, [], '{"id":"+39","code":"IT","name":"Italy"}');
-            }
+            $cb->new()
+                ->withMethod('GET')
+                ->withPath('/country/')
+                ->withConditionalResponse('code=de', new Response(200, [], '{"id":"+49","code":"DE","name":"Germany"}'))
+                ->withConditionalResponse('code=it', new Response(200, [], '{"id":"+39","code":"IT","name":"Italy"}'))
+                ->build()
         );
 
-        $handlerBuilder->addRouteWithFile('GET', '/country/DE/json', __DIR__ . '/fixtures/country.json');
-        $handlerBuilder->addRouteWithResponse('GET', '/admin/dashboard', new Response(401));
+        $handlerBuilder->addRoute(
+            $rb->new()
+                ->withMethod('GET')
+                ->withPath('/country/IT')
+                ->withResponse(new Response(200, [], '{"id":"+39","code":"IT","name":"Italy"}'))
+                ->build()
+        );
+
+        $handlerBuilder->addRoute(
+            $rb->new()
+                ->withMethod('GET')
+                ->withPath('/country/DE/json')
+                ->withFileResponse(__DIR__ . '/fixtures/country.json')
+                ->build()
+        );
+
+        $handlerBuilder->addRoute(
+            $rb->new()
+                ->withMethod('GET')
+                ->withPath('/admin/dashboard')
+                ->withResponse(new Response(401))
+                ->build()
+        );
 
         $clientBuilder = new MockedGuzzleClientBuilder($handlerBuilder);
 

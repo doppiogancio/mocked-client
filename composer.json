@@ -3,6 +3,14 @@
     "description": "A simple way to mock a client",
     "type": "library",
     "license": "MIT",
+    "keywords": [
+        "mock",
+        "http",
+        "client",
+        "testing",
+        "guzzle",
+        "php"
+    ],
     "require": {
         "php": "^7.4|^8.0",
         "league/route": ">=4.5",
@@ -30,12 +38,12 @@
     ],
     "autoload": {
         "psr-4": {
-            "DoppioGancio\\MockedClient\\": "src/"
+            "DoppioGancio\\MockedClient\\": "src/MockedClient"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "DoppioGancio\\MockedClientTests\\": "tests/"
+            "DoppioGancio\\MockedClient\\Tests\\": "tests/"
         }
     },
     "scripts": {
