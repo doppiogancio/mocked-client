@@ -8,6 +8,7 @@ use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamFactoryInterface;
+use Throwable;
 
 class RouteBuilder
 {
@@ -52,6 +53,15 @@ class RouteBuilder
     {
         $this->handler = static function (RequestInterface $request) use ($response): ResponseInterface {
             return $response;
+        };
+
+        return $this;
+    }
+
+    public function withException(Throwable $exception): self
+    {
+        $this->handler = static function (RequestInterface $request) use ($exception): void {
+            throw $exception;
         };
 
         return $this;

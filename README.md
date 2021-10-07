@@ -71,6 +71,18 @@ $handlerBuilder->addRoute(
         ->build()
 );
 
+// Route with a Guzzle Timeout
+$handlerBuilder->addRoute(
+      $rb->new()
+          ->withMethod('GET')
+          ->withPath('/slow/api')
+          ->withException(new ConnectException(
+              'Timed out after 30 seconds',
+              new Request('GET', '/slow/api')
+          ))
+          ->build()
+  );
+
 $clientBuilder = new MockedGuzzleClientBuilder($handlerBuilder);
 
 return $clientBuilder->build();
