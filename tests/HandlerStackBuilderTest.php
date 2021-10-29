@@ -9,6 +9,8 @@ use DoppioGancio\MockedClient\MockedGuzzleClientBuilder;
 use DoppioGancio\MockedClient\Route\ConditionalRouteBuilder;
 use DoppioGancio\MockedClient\Route\RouteBuilder;
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use Http\Discovery\Psr17FactoryDiscovery;
 use PHPUnit\Framework\TestCase;
@@ -52,6 +54,12 @@ class HandlerStackBuilderTest extends TestCase
     {
         $this->expectExceptionMessage('Mocked route GET /not/existing/route not found');
         $this->getMockedClient()->request('GET', '/not/existing/route');
+    }
+
+    public function testTimeout(): void
+    {
+        $this->expectExceptionMessage('Timed out after 30 seconds');
+        $this->getMockedClient()->request('GET', '/slow/api');
     }
 
     private function getMockedClient(): Client
@@ -100,6 +108,17 @@ class HandlerStackBuilderTest extends TestCase
                 ->withMethod('GET')
                 ->withPath('/admin/dashboard')
                 ->withResponse(new Response(401))
+                ->build()
+        );
+
+        $handlerBuilder->addRoute(
+            $rb->new()
+                ->withMethod('GET')
+                ->withPath('/slow/api')
+                ->withException(new ConnectException(
+                    'Timed out after 30 seconds',
+                    new Request('GET', '/slow/api')
+                ))
                 ->build()
         );
 
