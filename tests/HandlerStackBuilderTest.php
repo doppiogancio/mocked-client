@@ -33,6 +33,13 @@ class HandlerStackBuilderTest extends TestCase
         $this->assertEquals('{"id":"+39","code":"IT","name":"Italy"}', $body);
     }
 
+    public function testClientWithDefaultResponse(): void
+    {
+        $response = $this->getMockedClient()->request('GET', '/country/');
+        $body     = (string) $response->getBody();
+        $this->assertCount(2, json_decode($body, true));
+    }
+
     public function testClientWithFileRoute(): void
     {
         $response = $this->getMockedClient()->request('GET', '/country/DE/json');
@@ -84,6 +91,7 @@ class HandlerStackBuilderTest extends TestCase
                 ->withPath('/country/')
                 ->withConditionalResponse('code=de', new Response(200, [], '{"id":"+49","code":"DE","name":"Germany"}'))
                 ->withConditionalResponse('code=it', new Response(200, [], '{"id":"+39","code":"IT","name":"Italy"}'))
+                ->withDefaultFileResponse(__DIR__ . '/fixtures/countries.json')
                 ->build()
         );
 

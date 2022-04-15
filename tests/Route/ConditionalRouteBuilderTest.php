@@ -46,12 +46,15 @@ class ConditionalRouteBuilderTest extends TestCase
             ->withConditionalResponse('page=2&code=it', new Response(201))
             ->withConditionalResponse('code=de', new Response(301))
             ->withConditionalResponse('page=4', new Response(401))
-            ->withDefaultNotFoundResponse(new Response(123))
+            ->withDefaultFileResponse(__DIR__ . '/../fixtures/countries.json')
             ->build();
 
         $response = $route->getHandler()(new Request('GET', '/country?nonce=12345&code=fr&page=3'));
         assert($response instanceof ResponseInterface);
-        $this->assertEquals(123, $response->getStatusCode());
+
+        $body      = (string) $response->getBody();
+        $countries = json_decode($body, true);
+        $this->assertCount(2, $countries);
     }
 
     public function testQueryStringWithArrayNotation(): void
