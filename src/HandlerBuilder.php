@@ -68,7 +68,7 @@ class HandlerBuilder
     }
 
     /**
-     * @param array<string, string|string[]> $headers
+     * @param array<string,mixed> $headers
      *
      * @return $this
      */

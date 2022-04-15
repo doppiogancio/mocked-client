@@ -6,6 +6,7 @@ namespace DoppioGancio\MockedClientTests;
 
 use DoppioGancio\MockedClient\HandlerBuilder;
 use DoppioGancio\MockedClient\MockedGuzzleClientBuilder;
+use DoppioGancio\MockedClient\Route\ConditionalRouteBuilder;
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Response;
 use Http\Discovery\Psr17FactoryDiscovery;
@@ -46,12 +47,49 @@ class HandlerStackBuilderTest extends TestCase
         $this->getMockedClient()->request('GET', '/not/existing/route');
     }
 
+    public function testWithConditionalRoute(): void
+    {
+        $response = $this->getMockedClient()->request('GET', '/country/?size=2');
+        $this->assertEquals(200, $response->getStatusCode(), 'http status not matching');
+        $body = (string) $response->getBody();
+        $list = json_decode($body, true);
+        $this->assertCount(2, $list);
+    }
+
+    public function testWithConditionalRouteDefaultResponse(): void
+    {
+        $response = $this->getMockedClient()->request('GET', '/country/?sort_by=code');
+        $this->assertEquals(200, $response->getStatusCode(), 'http status not matching');
+        $body = (string) $response->getBody();
+        $list = json_decode($body, true);
+        $this->assertCount(0, $list);
+    }
+
     private function getMockedClient(): Client
     {
         $handlerBuilder = new HandlerBuilder(
             Psr17FactoryDiscovery::findResponseFactory(),
             Psr17FactoryDiscovery::findServerRequestFactory(),
             Psr17FactoryDiscovery::findStreamFactory(),
+        );
+
+        $cb = new ConditionalRouteBuilder(
+            Psr17FactoryDiscovery::findResponseFactory(),
+            Psr17FactoryDiscovery::findStreamFactory(),
+        );
+
+        $countriesRoute = $cb->new()
+            ->withMethod('GET')
+            ->withPath('/country/')
+            ->withConditionalFileResponse('size=2', __DIR__ . '/fixtures/list_of_2_countries.json')
+            ->withConditionalFileResponse('size=3', __DIR__ . '/fixtures/list_of_3_countries.json')
+            ->withDefaultFileResponse(__DIR__ . '/fixtures/list_of_countries.json')
+            ->build();
+
+        $handlerBuilder->addRoute(
+            $countriesRoute->getMethod(),
+            $countriesRoute->getPath(),
+            $countriesRoute->getHandler(),
         );
 
         $handlerBuilder->addRoute(
