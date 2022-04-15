@@ -37,6 +37,11 @@ class ConditionalRouteBuilder
         return $this;
     }
 
+    /**
+     * @param array<string,mixed> $headers
+     *
+     * @return $this
+     */
     public function withDefaultStringResponse(string $content, int $httpStatus = 200, array $headers = []): self
     {
         $this->defaultResponse = $this->buildResponseFromString($content, $httpStatus, $headers);
@@ -44,6 +49,11 @@ class ConditionalRouteBuilder
         return $this;
     }
 
+    /**
+     * @param array<string,mixed> $headers
+     *
+     * @return $this
+     */
     public function withDefaultFileResponse(string $file, int $httpStatus = 200, array $headers = []): self
     {
         $this->defaultResponse = $this->buildResponseFromFile($file, $httpStatus, $headers);
