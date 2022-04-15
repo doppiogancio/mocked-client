@@ -68,6 +68,7 @@ $handlerBuilder->addRoute(
         ->withConditionalResponse('code=de', new Response(200, [], '{"id":"+49","code":"DE","name":"Germany"}'))
         ->withConditionalFileResponse('code=it', __DIR__ . '/../fixtures/country_it.json')
         ->withConditionalStringResponse('code=fr', '{"id":"+33","code":"FR","name":"France"}')
+        ->withDefaultFileResponse(__DIR__ . '/fixtures/countries.json')
         ->build()
 );
 

@@ -16,7 +16,7 @@ class ConditionalRouteBuilder
 {
     use Builder;
 
-    private ResponseInterface $defaultNotFoundResponse;
+    private ResponseInterface $defaulResponse;
     protected ResponseFactoryInterface $responseFactory;
     protected StreamFactoryInterface $streamFactory;
 
@@ -25,16 +25,36 @@ class ConditionalRouteBuilder
 
     public function __construct(ResponseFactoryInterface $responseFactory, StreamFactoryInterface $streamFactory)
     {
-        $this->responseFactory         = $responseFactory;
-        $this->streamFactory           = $streamFactory;
-        $this->defaultNotFoundResponse = new Response(404);
+        $this->responseFactory = $responseFactory;
+        $this->streamFactory   = $streamFactory;
+        $this->defaulResponse  = new Response(404);
     }
 
-    public function withDefaultNotFoundResponse(ResponseInterface $response): self
+    public function withDefaultResponse(ResponseInterface $response): self
     {
-        $this->defaultNotFoundResponse = $response;
+        $this->defaulResponse = $response;
 
         return $this;
+    }
+
+    /**
+     * @param array<string, mixed> $headers
+     */
+    public function withDefaultStringResponse(string $queryString, int $httpStatus = 200, array $headers = []): self
+    {
+        return $this->withDefaultResponse(
+            $this->buildResponseFromString($queryString, $httpStatus, $headers)
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $headers
+     */
+    public function withDefaultFileResponse(string $file, int $httpStatus = 200, array $headers = []): self
+    {
+        return $this->withDefaultResponse(
+            $this->buildResponseFromFile($file, $httpStatus, $headers)
+        );
     }
 
     public function withConditionalResponse(string $queryString, ResponseInterface $response): self
@@ -49,7 +69,7 @@ class ConditionalRouteBuilder
     }
 
     /**
-     * @param array<string, string|string[]> $headers
+     * @param array<string, mixed> $headers
      */
     public function withConditionalStringResponse(
         string $queryString,
@@ -64,7 +84,7 @@ class ConditionalRouteBuilder
     }
 
     /**
-     * @param array<string, string|string[]> $headers
+     * @param array<string, mixed> $headers
      */
     public function withConditionalFileResponse(
         string $queryString,
@@ -97,7 +117,7 @@ class ConditionalRouteBuilder
                 }
             }
 
-            return $this->defaultNotFoundResponse;
+            return $this->defaulResponse;
         };
     }
 }
