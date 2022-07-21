@@ -174,8 +174,7 @@ class HandlerBuilder
 
                 throw new RouteNotFound(
                     $request->getMethod(),
-                    $request->getUri()->getPath(),
-                    $this->routes
+                    $request->getUri()->getPath()
                 );
             } catch (Throwable $e) {
                 $this->logError($e, $request);
