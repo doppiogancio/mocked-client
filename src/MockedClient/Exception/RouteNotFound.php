@@ -17,7 +17,7 @@ class RouteNotFound extends Exception
     /**
      * @param Route[] $routes
      */
-    public function __construct(string $method, string $path, array $routes)
+    public function __construct(string $method, string $path, array $routes = [])
     {
         $message = sprintf(
             "Mocked route %s %s not found \n%s",
