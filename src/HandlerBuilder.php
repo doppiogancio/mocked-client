@@ -172,6 +172,18 @@ class HandlerBuilder
             } catch (NotFoundException $e) {
                 $this->logError($e, $request);
 
+                foreach ($this->routes as $route) {
+                    if ($route->getPath() != $request->getUri()->getPath()) {
+                        continue;
+                    }
+
+                    if ($route->getMethod() != $request->getMethod()) {
+                        continue;
+                    }
+
+                    throw $e;
+                }
+
                 throw new RouteNotFound(
                     $request->getMethod(),
                     $request->getUri()->getPath(),
