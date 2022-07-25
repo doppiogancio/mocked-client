@@ -173,11 +173,11 @@ class HandlerBuilder
                 $this->logError($e, $request);
 
                 foreach ($this->routes as $route) {
-                    if ($route->getPath() != $request->getUri()->getPath()) {
+                    if ($route->getPath() !== $request->getUri()->getPath()) {
                         continue;
                     }
 
-                    if ($route->getMethod() != $request->getMethod()) {
+                    if ($route->getMethod() !== $request->getMethod()) {
                         continue;
                     }
 
