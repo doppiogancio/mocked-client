@@ -6,6 +6,7 @@ namespace DoppioGancio\MockedClient\Exception;
 
 use DoppioGancio\MockedClient\Route;
 use Exception;
+use Throwable;
 
 use function sprintf;
 
@@ -17,7 +18,7 @@ class RouteNotFound extends Exception
     /**
      * @param Route[] $routes
      */
-    public function __construct(string $method, string $path, array $routes = [])
+    public function __construct(string $method, string $path, array $routes = [], ?Throwable $previous = null)
     {
         $this->routes = $routes;
         $message      = sprintf(
@@ -27,7 +28,7 @@ class RouteNotFound extends Exception
             $this->routesToString($routes)
         );
 
-        parent::__construct($message);
+        parent::__construct($message, 0, $previous);
     }
 
     /**
