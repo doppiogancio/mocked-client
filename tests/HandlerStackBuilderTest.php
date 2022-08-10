@@ -8,6 +8,8 @@ use DoppioGancio\MockedClient\HandlerBuilder;
 use DoppioGancio\MockedClient\MockedGuzzleClientBuilder;
 use DoppioGancio\MockedClient\Route\ConditionalRouteBuilder;
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\ClientException;
+use GuzzleHttp\Exception\ServerException;
 use GuzzleHttp\Psr7\Response;
 use Http\Discovery\Psr17FactoryDiscovery;
 use PHPUnit\Framework\TestCase;
@@ -35,10 +37,16 @@ class HandlerStackBuilderTest extends TestCase
         $this->assertEquals('Germany', $country['name']);
     }
 
-    public function testClientWithResponse(): void
+    public function testClientException(): void
     {
-        $response = $this->getMockedClient()->request('GET', '/admin/dashboard');
-        $this->assertEquals(401, $response->getStatusCode(), 'http status not matching');
+        $this->expectException(ClientException::class);
+        $this->getMockedClient()->request('GET', '/admin/dashboard');
+    }
+
+    public function testServerException(): void
+    {
+        $this->expectException(ServerException::class);
+        $this->getMockedClient()->request('GET', '/slow/api');
     }
 
     public function testRouteNotFound(): void
@@ -102,6 +110,7 @@ class HandlerStackBuilderTest extends TestCase
 
         $handlerBuilder->addRouteWithFile('GET', '/country/DE/json', __DIR__ . '/fixtures/country.json');
         $handlerBuilder->addRouteWithResponse('GET', '/admin/dashboard', new Response(401));
+        $handlerBuilder->addRouteWithResponse('GET', '/slow/api', new Response(504));
 
         $clientBuilder = new MockedGuzzleClientBuilder($handlerBuilder);
 
