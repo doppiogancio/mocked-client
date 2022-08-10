@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace DoppioGancio\MockedClient\Tests\Route;
 
 use DoppioGancio\MockedClient\Route\RouteBuilder;
-use Exception;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use Http\Discovery\Psr17FactoryDiscovery;
@@ -32,23 +31,6 @@ class RouteBuilderTest extends TestCase
         $response = $route->getHandler()(new Request('GET', '/country?nonce=12345&code=it&page=2'));
         assert($response instanceof ResponseInterface);
         $this->assertEquals(123, $response->getStatusCode());
-    }
-
-    public function testTimeout(): void
-    {
-        $builder = new RouteBuilder(
-            Psr17FactoryDiscovery::findResponseFactory(),
-            Psr17FactoryDiscovery::findStreamFactory(),
-        );
-
-        $route = $builder
-            ->withMethod('GET')
-            ->withPath('/country')
-            ->withException(new Exception('Timed out after 30 seconds'))
-            ->build();
-
-        $this->expectExceptionMessage('Timed out after 30 seconds');
-        $route->getHandler()(new Request('GET', '/country?nonce=12345&code=it&page=2'));
     }
 
     public function testIncompleteRoute(): void
