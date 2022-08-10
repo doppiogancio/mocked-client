@@ -58,6 +58,9 @@ class RouteBuilder
         return $this;
     }
 
+    /**
+     * @deprecated just use http status codes
+     */
     public function withException(Throwable $exception): self
     {
         $this->handler = static function (RequestInterface $request) use ($exception): void {
