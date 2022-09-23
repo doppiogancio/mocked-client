@@ -58,7 +58,10 @@ class HandlerBuilder
             );
 
             $serverRequest = $this->serverRequestFactory
-                ->createServerRequest($request->getMethod(), $request->getUri());
+                ->createServerRequest(
+                    $request->getMethod(),
+                    sprintf('/%s', ltrim($request->getUri()->__toString(), '/'))
+                );
 
             try {
                 $response = $router->dispatch($serverRequest);
