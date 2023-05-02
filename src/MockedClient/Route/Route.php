@@ -4,38 +4,18 @@ declare(strict_types=1);
 
 namespace DoppioGancio\MockedClient\Route;
 
-use Psr\Http\Message\RequestInterface;
-use Psr\Http\Message\ResponseInterface;
+use Closure;
 
 class Route
 {
-    private string $method;
-    private string $path;
-
-    /** @var callable(RequestInterface, array): ResponseInterface */
-    private $handler;
-
-    /**
-     * @param callable(RequestInterface, array): ResponseInterface $handler
-     */
-    public function __construct(string $method, string $path, callable $handler)
-    {
-        $this->method  = $method;
-        $this->path    = $path;
-        $this->handler = $handler;
+    public function __construct(
+        public readonly string $method,
+        public readonly string $path,
+        public readonly Closure $handler,
+    ) {
     }
 
-    public function getMethod(): string
-    {
-        return $this->method;
-    }
-
-    public function getPath(): string
-    {
-        return $this->path;
-    }
-
-    public function getHandler(): callable
+    public function getHandler(): Closure
     {
         return $this->handler;
     }

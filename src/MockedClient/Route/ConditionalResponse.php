@@ -8,22 +8,14 @@ use Psr\Http\Message\ResponseInterface;
 
 class ConditionalResponse
 {
-    /** @var array<string,string> */
-    private array $requiredParameters;
-    private ResponseInterface $response;
-
-    /**
-     * @param array<string,string> $requiredParameters
-     */
-    public function __construct(array $requiredParameters, ResponseInterface $response)
-    {
-        $this->requiredParameters = $requiredParameters;
-        $this->response           = $response;
+    /** @param array<int|string,mixed|string> $requiredParameters */
+    public function __construct(
+        private readonly array $requiredParameters,
+        public readonly ResponseInterface $response,
+    ) {
     }
 
-    /**
-     * @param array<string,string> $parameters
-     */
+    /** @param array<int|string,mixed|string> $parameters */
     public function matchAgainst(array $parameters): bool
     {
         foreach ($this->requiredParameters as $key => $value) {
@@ -37,10 +29,5 @@ class ConditionalResponse
         }
 
         return true;
-    }
-
-    public function getResponse(): ResponseInterface
-    {
-        return $this->response;
     }
 }

@@ -15,35 +15,29 @@ use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Psr7\Response;
 use Psr\Http\Message\RequestInterface;
 use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 
 use function assert;
 
 class MockedGuzzleClientBuilder
 {
-    private HandlerBuilder $handlerBuilder;
-    private LoggerInterface $logger;
-
     public function __construct(
-        HandlerBuilder $handlerBuilder,
-        ?LoggerInterface $logger = null
+        private readonly HandlerBuilder $handlerBuilder,
+        private readonly LoggerInterface $logger,
     ) {
-        $this->handlerBuilder = $handlerBuilder;
-        $this->logger         = $logger ?? new NullLogger();
     }
 
     public function build(): Client
     {
         $handler = $this->handlerBuilder->build();
 
-        $callback = static function (RequestInterface $request, $options) use ($handler): PromiseInterface {
+        $callback = static function (RequestInterface $request) use ($handler): PromiseInterface {
             $response = $handler($request);
             assert($response instanceof Response);
             if ($response->getStatusCode() >= 400 && $response->getStatusCode() < 500) {
                 throw new ClientException(
                     $response->getBody()->getContents(),
                     $request,
-                    $response
+                    $response,
                 );
             }
 
@@ -51,7 +45,7 @@ class MockedGuzzleClientBuilder
                 throw new ServerException(
                     $response->getBody()->getContents(),
                     $request,
-                    $response
+                    $response,
                 );
             }
 
@@ -60,12 +54,10 @@ class MockedGuzzleClientBuilder
 
         $handlerStack = new HandlerStack($callback);
 
-        if ($this->logger !== null) {
-            $handlerStack->push(Middleware::log(
-                $this->logger,
-                new MessageFormatter()
-            ));
-        }
+        $handlerStack->push(Middleware::log(
+            $this->logger,
+            new MessageFormatter(),
+        ));
 
         return new Client(['handler' => $handlerStack]);
     }

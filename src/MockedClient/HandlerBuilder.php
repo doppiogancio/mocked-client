@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace DoppioGancio\MockedClient;
 
+use Closure;
 use DoppioGancio\MockedClient\Exception\RouteNotFound;
 use DoppioGancio\MockedClient\Route\Route;
 use League\Route\Http\Exception\NotFoundException;
@@ -12,7 +13,6 @@ use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestFactoryInterface;
 use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 use Throwable;
 
 use function sprintf;
@@ -21,13 +21,11 @@ class HandlerBuilder
 {
     /** @var Route[] */
     private array $routes = [];
-    private ServerRequestFactoryInterface $serverRequestFactory;
-    private LoggerInterface $logger;
 
-    public function __construct(ServerRequestFactoryInterface $serverRequestFactory, ?LoggerInterface $logger = null)
-    {
-        $this->serverRequestFactory = $serverRequestFactory;
-        $this->logger               = $logger ?? new NullLogger();
+    public function __construct(
+        private readonly ServerRequestFactoryInterface $serverRequestFactory,
+        private readonly LoggerInterface $logger,
+    ) {
     }
 
     public function addRoute(Route $route): self
@@ -37,24 +35,21 @@ class HandlerBuilder
         return $this;
     }
 
-    /**
-     * @return callable(RequestInterface): ResponseInterface
-     */
-    public function build(): callable
+    public function build(): Closure
     {
         return function (RequestInterface $request): ResponseInterface {
             $router = new Router();
             foreach ($this->routes as $route) {
                 $router->map(
-                    $route->getMethod(),
-                    $route->getPath(),
-                    $route->getHandler()
+                    $route->method,
+                    $route->path,
+                    $route->handler,
                 );
             }
 
             $this->logger->debug(
                 sprintf('Request: %s %s', $request->getMethod(), $request->getUri()),
-                ['request' => $request]
+                ['request' => $request],
             );
 
             $serverRequest = $this->serverRequestFactory
@@ -67,12 +62,12 @@ class HandlerBuilder
                         'Response: %d %s %s',
                         $response->getStatusCode(),
                         $request->getMethod(),
-                        $request->getUri()
+                        $request->getUri(),
                     ),
                     [
                         'request' => $request,
                         'response' => $response,
-                    ]
+                    ],
                 );
 
                 return $response;
@@ -82,7 +77,7 @@ class HandlerBuilder
                 throw new RouteNotFound(
                     $request->getMethod(),
                     $request->getUri()->getPath(),
-                    $this->routes
+                    $this->routes,
                 );
             } catch (Throwable $e) {
                 $this->logError($e, $request);

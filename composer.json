@@ -12,24 +12,20 @@
         "php"
     ],
     "require": {
-        "php": "^7.4|^8.0",
-        "league/route": ">=4.5",
-
-        "psr/log": "^1.0|^2.0|^3.0",
-        "psr/http-factory": "^1.0",
-
-        "psr/http-factory-implementation": "^1.0",
-        "psr/http-message-implementation": "^1.0"
+        "php": "^8.2",
+        "league/route": "^5.1.2",
+        "psr/log": "^3.0",
+        "psr/http-factory": "^1.0"
     },
     "require-dev": {
-        "php-http/discovery": "^1.13",
-        "guzzlehttp/guzzle": "^6.0|^7.0",
-        "phpunit/phpunit": "^9.5",
-        "squizlabs/php_codesniffer": "*",
-        "slevomat/coding-standard": "^7.0",
-        "phpstan/phpstan": "^0.12.94",
-        "doctrine/coding-standard": "^9.0",
-      "ext-json": "*"
+        "phpunit/phpunit": "^10.1",
+        "ext-json": "*",
+        "php-http/discovery": "^1.17",
+        "guzzlehttp/guzzle": "^7.5",
+        "squizlabs/php_codesniffer": "^3.7",
+        "slevomat/coding-standard": "^8.11",
+        "phpstan/phpstan": "^1.10",
+        "doctrine/coding-standard": "^12.0"
     },
     "authors": [
         {
@@ -60,7 +56,8 @@
     },
     "config": {
         "allow-plugins": {
-            "dealerdirect/phpcodesniffer-composer-installer": true
+            "dealerdirect/phpcodesniffer-composer-installer": true,
+            "php-http/discovery": true
         }
     }
 }
