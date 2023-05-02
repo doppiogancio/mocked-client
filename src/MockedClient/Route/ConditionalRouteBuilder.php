@@ -19,9 +19,9 @@ class ConditionalRouteBuilder extends Builder
     /** @var ConditionalResponse[] */
     private array $responses = [];
 
-    public function new(): ConditionalRouteBuilder
+    public function new(): self
     {
-        return new ConditionalRouteBuilder($this->responseFactory, $this->streamFactory);
+        return new self($this->responseFactory, $this->streamFactory);
     }
 
     public function withDefaultResponse(ResponseInterface $response): self

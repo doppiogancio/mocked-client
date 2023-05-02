@@ -14,9 +14,9 @@ class RouteBuilder extends Builder
     protected string|null $path     = null;
     protected Closure|null $handler = null;
 
-    public function new(): RouteBuilder
+    public function new(): self
     {
-        return new RouteBuilder($this->responseFactory, $this->streamFactory);
+        return new self($this->responseFactory, $this->streamFactory);
     }
 
     /** @param array<string, string|string[]> $headers */
