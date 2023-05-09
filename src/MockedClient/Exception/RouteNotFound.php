@@ -11,42 +11,28 @@ use function sprintf;
 
 class RouteNotFound extends Exception
 {
-    /** @var Route[] */
-    private array $routes;
-
-    /**
-     * @param Route[] $routes
-     */
+    /** @param Route[] $routes */
     public function __construct(string $method, string $path, array $routes = [])
     {
         $message = sprintf(
             "Mocked route %s %s not found \n%s",
             $method,
             $path,
-            $this->routesToString($routes)
+            $this->routesToString($routes),
         );
-
-        $this->routes = $routes;
 
         parent::__construct($message);
     }
 
-    /**
-     * @param Route[] $routes
-     */
+    /** @param Route[] $routes */
     private function routesToString(array $routes): string
     {
         $string = "Mocked routes:\n\n";
 
         foreach ($routes as $route) {
-            $string .= sprintf("ROUTE %s %s\n", $route->getMethod(), $route->getPath());
+            $string .= sprintf("ROUTE %s %s\n", $route->method, $route->path);
         }
 
         return $string;
-    }
-
-    public function getRoutesAsString(): string
-    {
-        return $this->routesToString($this->routes);
     }
 }

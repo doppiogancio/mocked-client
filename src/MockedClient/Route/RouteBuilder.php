@@ -4,34 +4,22 @@ declare(strict_types=1);
 
 namespace DoppioGancio\MockedClient\Route;
 
+use Closure;
 use Psr\Http\Message\RequestInterface;
-use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\StreamFactoryInterface;
-use Throwable;
 
-class RouteBuilder
+class RouteBuilder extends Builder
 {
-    use Builder;
+    protected string|null $method   = null;
+    protected string|null $path     = null;
+    protected Closure|null $handler = null;
 
-    protected ResponseFactoryInterface $responseFactory;
-    protected StreamFactoryInterface $streamFactory;
-
-    protected ?string $method = null;
-    protected ?string $path   = null;
-
-    /** @var ?callable null */
-    protected $handler = null;
-
-    public function __construct(ResponseFactoryInterface $responseFactory, StreamFactoryInterface $streamFactory)
+    public function new(): self
     {
-        $this->responseFactory = $responseFactory;
-        $this->streamFactory   = $streamFactory;
+        return new self($this->responseFactory, $this->streamFactory);
     }
 
-    /**
-     * @param array<string, string|string[]> $headers
-     */
+    /** @param array<string, string|string[]> $headers */
     public function withStringResponse(string $content, int $httpStatus = 200, array $headers = []): self
     {
         $response = $this->buildResponseFromString($content, $httpStatus, $headers);
@@ -39,9 +27,7 @@ class RouteBuilder
         return $this->withResponse($response);
     }
 
-    /**
-     * @param array<string, string|string[]> $headers
-     */
+    /** @param array<string, string|string[]> $headers */
     public function withFileResponse(string $file, int $httpStatus = 200, array $headers = []): self
     {
         $response = $this->buildResponseFromFile($file, $httpStatus, $headers);
@@ -58,19 +44,7 @@ class RouteBuilder
         return $this;
     }
 
-    /**
-     * @deprecated just use http status codes
-     */
-    public function withException(Throwable $exception): self
-    {
-        $this->handler = static function (RequestInterface $request) use ($exception): void {
-            throw $exception;
-        };
-
-        return $this;
-    }
-
-    public function withHandler(callable $handler): self
+    public function withHandler(Closure $handler): self
     {
         $this->handler = $handler;
 
@@ -82,7 +56,7 @@ class RouteBuilder
         return $this->buildRoute(
             $this->method,
             $this->path,
-            $this->handler
+            $this->handler,
         );
     }
 }

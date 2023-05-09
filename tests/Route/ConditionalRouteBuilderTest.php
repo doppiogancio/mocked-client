@@ -66,17 +66,19 @@ class ConditionalRouteBuilderTest extends TestCase
 
         $route = $builder->withMethod('GET')
             ->withPath('/manufacturers')
+            ->withConditionalStringResponse(
+                'filters%5BhasContent%5D=0',
+                '{}',
+            )
             ->withConditionalFileResponse(
                 'filters%5BhasContent%5D=1',
-                __DIR__ . '/../fixtures/api_parts_manufacturers.json'
+                __DIR__ . '/../fixtures/api_parts_manufacturers.json',
             )
             ->build();
 
         $response = $route->getHandler()(new Request('GET', '/manufacturers?filters[hasContent]=1'));
         assert($response instanceof ResponseInterface);
         $this->assertEquals(200, $response->getStatusCode());
-
-        assert($response instanceof ResponseInterface);
         $data = json_decode($response->getBody()->getContents(), true);
         $this->assertCount(2, $data['manufacturers']);
     }

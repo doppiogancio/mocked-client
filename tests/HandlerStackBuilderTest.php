@@ -10,15 +10,18 @@ use DoppioGancio\MockedClient\Route\ConditionalRouteBuilder;
 use DoppioGancio\MockedClient\Route\RouteBuilder;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
+use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\ServerException;
 use GuzzleHttp\Psr7\Response;
 use Http\Discovery\Psr17FactoryDiscovery;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 
 use function json_decode;
 
 class HandlerStackBuilderTest extends TestCase
 {
+    /** @throws GuzzleException */
     public function testClientWithBaseRoute(): void
     {
         $response = $this->getMockedClient()->request('GET', '/country/IT');
@@ -26,6 +29,7 @@ class HandlerStackBuilderTest extends TestCase
         $this->assertEquals('{"id":"+39","code":"IT","name":"Italy"}', $body);
     }
 
+    /** @throws GuzzleException */
     public function testClientWithQueryStrings(): void
     {
         $response = $this->getMockedClient()->request('GET', '/country/?page=1&code=it');
@@ -33,6 +37,7 @@ class HandlerStackBuilderTest extends TestCase
         $this->assertEquals('{"id":"+39","code":"IT","name":"Italy"}', $body);
     }
 
+    /** @throws GuzzleException */
     public function testClientWithDefaultResponse(): void
     {
         $response = $this->getMockedClient()->request('GET', '/country/');
@@ -40,6 +45,7 @@ class HandlerStackBuilderTest extends TestCase
         $this->assertCount(2, json_decode($body, true));
     }
 
+    /** @throws GuzzleException */
     public function testClientWithFileRoute(): void
     {
         $response = $this->getMockedClient()->request('GET', '/country/DE/json');
@@ -51,18 +57,21 @@ class HandlerStackBuilderTest extends TestCase
         $this->assertEquals('Germany', $country['name']);
     }
 
+    /** @throws GuzzleException */
     public function testClientException(): void
     {
         $this->expectException(ClientException::class);
         $this->getMockedClient()->request('GET', '/admin/dashboard');
     }
 
+    /** @throws GuzzleException */
     public function testServerException(): void
     {
         $this->expectException(ServerException::class);
         $this->getMockedClient()->request('GET', '/slow/api');
     }
 
+    /** @throws GuzzleException */
     public function testRouteNotFound(): void
     {
         $this->expectExceptionMessage('Mocked route GET /not/existing/route not found');
@@ -80,6 +89,7 @@ class HandlerStackBuilderTest extends TestCase
     {
         $handlerBuilder = new HandlerBuilder(
             Psr17FactoryDiscovery::findServerRequestFactory(),
+            new NullLogger(),
         );
 
         $cb = new ConditionalRouteBuilder(
@@ -98,8 +108,9 @@ class HandlerStackBuilderTest extends TestCase
                 ->withPath('/country/')
                 ->withConditionalResponse('code=de', new Response(200, [], '{"id":"+49","code":"DE","name":"Germany"}'))
                 ->withConditionalResponse('code=it', new Response(200, [], '{"id":"+39","code":"IT","name":"Italy"}'))
+                ->withDefaultStringResponse('{}')
                 ->withDefaultFileResponse(__DIR__ . '/fixtures/countries.json')
-                ->build()
+                ->build(),
         );
 
         $handlerBuilder->addRoute(
@@ -107,7 +118,7 @@ class HandlerStackBuilderTest extends TestCase
                 ->withMethod('GET')
                 ->withPath('/country/IT')
                 ->withResponse(new Response(200, [], '{"id":"+39","code":"IT","name":"Italy"}'))
-                ->build()
+                ->build(),
         );
 
         $handlerBuilder->addRoute(
@@ -115,7 +126,7 @@ class HandlerStackBuilderTest extends TestCase
                 ->withMethod('GET')
                 ->withPath('/country/DE/json')
                 ->withFileResponse(__DIR__ . '/fixtures/country.json')
-                ->build()
+                ->build(),
         );
 
         $handlerBuilder->addRoute(
@@ -123,7 +134,7 @@ class HandlerStackBuilderTest extends TestCase
                 ->withMethod('GET')
                 ->withPath('/admin/dashboard')
                 ->withResponse(new Response(401))
-                ->build()
+                ->build(),
         );
 
         $handlerBuilder->addRoute(
@@ -131,10 +142,10 @@ class HandlerStackBuilderTest extends TestCase
                 ->withMethod('GET')
                 ->withPath('/slow/api')
                 ->withStringResponse('Gateway timeout', 504)
-                ->build()
+                ->build(),
         );
 
-        $clientBuilder = new MockedGuzzleClientBuilder($handlerBuilder);
+        $clientBuilder = new MockedGuzzleClientBuilder($handlerBuilder, new NullLogger());
 
         return $clientBuilder->build();
     }
