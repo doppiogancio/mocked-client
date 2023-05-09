@@ -15,6 +15,7 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Throwable;
 
+use function ltrim;
 use function sprintf;
 
 class HandlerBuilder
