@@ -69,6 +69,13 @@ class HandlerStackBuilderTest extends TestCase
         $this->getMockedClient()->request('GET', '/not/existing/route');
     }
 
+    public function testRelativeRoute(): void
+    {
+        $response = $this->getMockedClient()->request('GET', 'country/IT');
+        $body     = (string) $response->getBody();
+        $this->assertEquals('{"id":"+39","code":"IT","name":"Italy"}', $body);
+    }
+
     private function getMockedClient(): Client
     {
         $handlerBuilder = new HandlerBuilder(
