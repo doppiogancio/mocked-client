@@ -56,7 +56,7 @@ class HandlerBuilder
             $serverRequest = $this->serverRequestFactory
                 ->createServerRequest(
                     $request->getMethod(),
-                    sprintf('/%s', ltrim($request->getUri()->__toString(), '/'))
+                    sprintf('/%s', ltrim($request->getUri()->__toString(), '/')),
                 );
 
             try {
