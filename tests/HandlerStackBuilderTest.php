@@ -58,6 +58,18 @@ class HandlerStackBuilderTest extends TestCase
     }
 
     /** @throws GuzzleException */
+    public function testRelativePath(): void
+    {
+        $response = $this->getMockedClient()->request('GET', 'country/AU');
+        $body     = (string) $response->getBody();
+        $country  = json_decode($body, true);
+
+        $this->assertEquals('+43', $country['id']);
+        $this->assertEquals('AU', $country['code']);
+        $this->assertEquals('Austria', $country['name']);
+    }
+
+    /** @throws GuzzleException */
     public function testClientException(): void
     {
         $this->expectException(ClientException::class);
@@ -118,6 +130,14 @@ class HandlerStackBuilderTest extends TestCase
                 ->withMethod('GET')
                 ->withPath('/country/IT')
                 ->withResponse(new Response(200, [], '{"id":"+39","code":"IT","name":"Italy"}'))
+                ->build(),
+        );
+
+        $handlerBuilder->addRoute(
+            $rb->new()
+                ->withMethod('GET')
+                ->withPath('country/AU')
+                ->withResponse(new Response(200, [], '{"id":"+43","code":"AU","name":"Austria"}'))
                 ->build(),
         );
 
