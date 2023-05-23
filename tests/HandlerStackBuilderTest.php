@@ -12,6 +12,7 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\ServerException;
+use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use Http\Discovery\Psr17FactoryDiscovery;
 use PHPUnit\Framework\TestCase;
@@ -136,6 +137,36 @@ class HandlerStackBuilderTest extends TestCase
         $this->assertEquals(123, $response->getStatusCode());
     }
 
+    public function testRequestWithHeaders(): void
+    {
+        $response = $this->getMockedClient()->request('GET', '/headers', [
+            'headers' => ['test-header' => 'test-value'],
+        ]);
+        $body     = (string) $response->getBody();
+        $this->assertEquals('test-value', $body);
+    }
+
+    public function testRequestWithJsonBody(): void
+    {
+        $response = $this->getMockedClient()->request('POST', '/body', [
+            'json' => ['key' => 'value'],
+        ]);
+        $body     = (string) $response->getBody();
+        $this->assertEquals('{"key":"value"}', $body);
+    }
+
+    public function testRequestWithFormBody(): void
+    {
+        $response = $this->getMockedClient()->request('POST', '/body', [
+            'form_params' => [
+                'key1' => 'value1',
+                'key2' => 'value2',
+            ],
+        ]);
+        $body     = (string) $response->getBody();
+        $this->assertEquals('key1=value1&key2=value2', $body);
+    }
+
     private function getMockedClient(): Client
     {
         $this->handlerBuilder->addRoute(
@@ -186,6 +217,26 @@ class HandlerStackBuilderTest extends TestCase
                 ->withMethod('GET')
                 ->withPath('/slow/api')
                 ->withStringResponse('Gateway timeout', 504)
+                ->build(),
+        );
+
+        $this->handlerBuilder->addRoute(
+            $this->routeBuilder
+                ->withMethod('GET')
+                ->withPath('/headers')
+                ->withHandler(static function (Request $request): Response {
+                    return new Response(200, [], $request->getHeaderLine('test-header'));
+                })
+                ->build(),
+        );
+
+        $this->handlerBuilder->addRoute(
+            $this->routeBuilder
+                ->withMethod('POST')
+                ->withPath('/body')
+                ->withHandler(static function (Request $request): Response {
+                    return new Response(200, [], $request->getBody()->getContents());
+                })
                 ->build(),
         );
 

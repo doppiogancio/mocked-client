@@ -59,6 +59,11 @@ class HandlerBuilder
                     sprintf('/%s', ltrim($request->getUri()->__toString(), '/')),
                 );
 
+            $serverRequest = $serverRequest->withBody($request->getBody());
+            foreach ($request->getHeaders() as $name => $value) {
+                $serverRequest = $serverRequest->withHeader($name, $value);
+            }
+
             try {
                 $response = $router->dispatch($serverRequest);
                 $this->logger->debug(
