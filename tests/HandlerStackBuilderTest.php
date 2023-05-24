@@ -21,6 +21,31 @@ use function json_decode;
 
 class HandlerStackBuilderTest extends TestCase
 {
+    private HandlerBuilder $handlerBuilder;
+    private RouteBuilder $routeBuilder;
+
+    private ConditionalRouteBuilder $conditionalRouteBuilder;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->handlerBuilder = new HandlerBuilder(
+            Psr17FactoryDiscovery::findServerRequestFactory(),
+            new NullLogger(),
+        );
+
+        $this->routeBuilder = new RouteBuilder(
+            Psr17FactoryDiscovery::findResponseFactory(),
+            Psr17FactoryDiscovery::findStreamFactory(),
+        );
+
+        $this->conditionalRouteBuilder = new ConditionalRouteBuilder(
+            Psr17FactoryDiscovery::findResponseFactory(),
+            Psr17FactoryDiscovery::findStreamFactory(),
+        );
+    }
+
     /** @throws GuzzleException */
     public function testClientWithBaseRoute(): void
     {
@@ -97,25 +122,24 @@ class HandlerStackBuilderTest extends TestCase
         $this->assertEquals('{"id":"+39","code":"IT","name":"Italy"}', $body);
     }
 
+    public function testLazyBuiltHandler(): void
+    {
+        $this->handlerBuilder->addRoute(
+            $this->routeBuilder->new()
+                ->withMethod('PATCH')
+                ->withPath('/lazy/builder')
+                ->withResponse(new Response(123))
+                ->build(),
+        );
+
+        $response = $this->getMockedClient()->request('PATCH', '/lazy/builder');
+        $this->assertEquals(123, $response->getStatusCode());
+    }
+
     private function getMockedClient(): Client
     {
-        $handlerBuilder = new HandlerBuilder(
-            Psr17FactoryDiscovery::findServerRequestFactory(),
-            new NullLogger(),
-        );
-
-        $cb = new ConditionalRouteBuilder(
-            Psr17FactoryDiscovery::findResponseFactory(),
-            Psr17FactoryDiscovery::findStreamFactory(),
-        );
-
-        $rb = new RouteBuilder(
-            Psr17FactoryDiscovery::findResponseFactory(),
-            Psr17FactoryDiscovery::findStreamFactory(),
-        );
-
-        $handlerBuilder->addRoute(
-            $cb->new()
+        $this->handlerBuilder->addRoute(
+            $this->conditionalRouteBuilder->new()
                 ->withMethod('GET')
                 ->withPath('/country/')
                 ->withConditionalResponse('code=de', new Response(200, [], '{"id":"+49","code":"DE","name":"Germany"}'))
@@ -125,47 +149,47 @@ class HandlerStackBuilderTest extends TestCase
                 ->build(),
         );
 
-        $handlerBuilder->addRoute(
-            $rb->new()
+        $this->handlerBuilder->addRoute(
+            $this->routeBuilder->new()
                 ->withMethod('GET')
                 ->withPath('/country/IT')
                 ->withResponse(new Response(200, [], '{"id":"+39","code":"IT","name":"Italy"}'))
                 ->build(),
         );
 
-        $handlerBuilder->addRoute(
-            $rb->new()
+        $this->handlerBuilder->addRoute(
+            $this->routeBuilder->new()
                 ->withMethod('GET')
                 ->withPath('country/AU')
                 ->withResponse(new Response(200, [], '{"id":"+43","code":"AU","name":"Austria"}'))
                 ->build(),
         );
 
-        $handlerBuilder->addRoute(
-            $rb->new()
+        $this->handlerBuilder->addRoute(
+            $this->routeBuilder->new()
                 ->withMethod('GET')
                 ->withPath('/country/DE/json')
                 ->withFileResponse(__DIR__ . '/fixtures/country.json')
                 ->build(),
         );
 
-        $handlerBuilder->addRoute(
-            $rb->new()
+        $this->handlerBuilder->addRoute(
+            $this->routeBuilder->new()
                 ->withMethod('GET')
                 ->withPath('/admin/dashboard')
                 ->withResponse(new Response(401))
                 ->build(),
         );
 
-        $handlerBuilder->addRoute(
-            $rb->new()
+        $this->handlerBuilder->addRoute(
+            $this->routeBuilder->new()
                 ->withMethod('GET')
                 ->withPath('/slow/api')
                 ->withStringResponse('Gateway timeout', 504)
                 ->build(),
         );
 
-        $clientBuilder = new MockedGuzzleClientBuilder($handlerBuilder, new NullLogger());
+        $clientBuilder = new MockedGuzzleClientBuilder($this->handlerBuilder, new NullLogger());
 
         return $clientBuilder->build();
     }
