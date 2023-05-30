@@ -17,7 +17,7 @@ use PHPUnit\Framework\TestCase;
 
 use function json_decode;
 
-class HandlerStackBuilderTest extends TestCase
+class GuzzleClientTest extends TestCase
 {
     public function testClientWithBaseRoute(): void
     {
@@ -29,6 +29,20 @@ class HandlerStackBuilderTest extends TestCase
     public function testClientWithQueryStrings(): void
     {
         $response = $this->getMockedClient()->request('GET', '/country/?page=1&code=it');
+        $body     = (string) $response->getBody();
+        $this->assertEquals('{"id":"+39","code":"IT","name":"Italy"}', $body);
+    }
+
+    public function testClientWithFullUrl(): void
+    {
+        $response = $this->getMockedClient()->request('GET', 'http://user:password@localhost:8099/country/?page=1&code=it');
+        $body     = (string) $response->getBody();
+        $this->assertEquals('{"id":"+39","code":"IT","name":"Italy"}', $body);
+    }
+
+    public function testRelativeUrl(): void
+    {
+        $response = $this->getMockedClient()->request('GET', 'country/IT');
         $body     = (string) $response->getBody();
         $this->assertEquals('{"id":"+39","code":"IT","name":"Italy"}', $body);
     }
@@ -67,13 +81,6 @@ class HandlerStackBuilderTest extends TestCase
     {
         $this->expectExceptionMessage('Mocked route GET /not/existing/route not found');
         $this->getMockedClient()->request('GET', '/not/existing/route');
-    }
-
-    public function testRelativeRoute(): void
-    {
-        $response = $this->getMockedClient()->request('GET', 'country/IT');
-        $body     = (string) $response->getBody();
-        $this->assertEquals('{"id":"+39","code":"IT","name":"Italy"}', $body);
     }
 
     private function getMockedClient(): Client
