@@ -25,7 +25,7 @@ class MockedGuzzleClientBuilder
     private LoggerInterface $logger;
 
     /** @var array<callable>  */
-    private array $middlewares;
+    private array $middlewares = [];
 
     public function __construct(
         HandlerBuilder $handlerBuilder,
