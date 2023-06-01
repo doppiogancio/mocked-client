@@ -29,7 +29,8 @@
         "slevomat/coding-standard": "^7.0",
         "phpstan/phpstan": "^0.12.94",
         "doctrine/coding-standard": "^9.0",
-      "ext-json": "*"
+        "ext-json": "*",
+        "symfony/var-dumper": "^6.3"
     },
     "authors": [
         {

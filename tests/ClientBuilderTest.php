@@ -8,17 +8,27 @@ use DoppioGancio\MockedClient\HandlerBuilder;
 use DoppioGancio\MockedClient\MockedGuzzleClientBuilder;
 use DoppioGancio\MockedClient\Route\ConditionalRouteBuilder;
 use DoppioGancio\MockedClient\Route\RouteBuilder;
+use DoppioGancio\MockedClient\Tests\Middleware\AddRequestHeader;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\ServerException;
 use GuzzleHttp\Psr7\Response;
 use Http\Discovery\Psr17FactoryDiscovery;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
 
 use function json_decode;
 
-class HandlerStackBuilderTest extends TestCase
+class ClientBuilderTest extends TestCase
 {
+    public function testMiddlewares(): void
+    {
+        $response = $this->getMockedClient()->request('GET', '/middleware');
+        $body     = (string) $response->getBody();
+        $this->assertEquals('x-value', $body);
+    }
+
     public function testClientWithBaseRoute(): void
     {
         $response = $this->getMockedClient()->request('GET', '/country/IT');
@@ -134,7 +144,18 @@ class HandlerStackBuilderTest extends TestCase
                 ->build()
         );
 
+        $handlerBuilder->addRoute(
+            $rb->new()
+                ->withMethod('GET')
+                ->withPath('/middleware')
+                ->withHandler(static function (RequestInterface $request): ResponseInterface {
+                    return new Response(200, [], $request->getHeader('x-name')[0]);
+                })
+                ->build()
+        );
+
         $clientBuilder = new MockedGuzzleClientBuilder($handlerBuilder);
+        $clientBuilder->addMiddleware(new AddRequestHeader('x-name', 'x-value'));
 
         return $clientBuilder->build();
     }

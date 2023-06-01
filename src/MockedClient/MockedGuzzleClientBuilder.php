@@ -24,12 +24,22 @@ class MockedGuzzleClientBuilder
     private HandlerBuilder $handlerBuilder;
     private LoggerInterface $logger;
 
+    /** @var array<callable>  */
+    private array $middlewares;
+
     public function __construct(
         HandlerBuilder $handlerBuilder,
         ?LoggerInterface $logger = null
     ) {
         $this->handlerBuilder = $handlerBuilder;
         $this->logger         = $logger ?? new NullLogger();
+    }
+
+    public function addMiddleware(callable $middleware): self
+    {
+        $this->middlewares[] = $middleware;
+
+        return $this;
     }
 
     public function build(): Client
@@ -60,11 +70,13 @@ class MockedGuzzleClientBuilder
 
         $handlerStack = new HandlerStack($callback);
 
-        if ($this->logger !== null) {
-            $handlerStack->push(Middleware::log(
-                $this->logger,
-                new MessageFormatter()
-            ));
+        $handlerStack->push(Middleware::log(
+            $this->logger,
+            new MessageFormatter()
+        ));
+
+        foreach ($this->middlewares as $middleware) {
+            $handlerStack->push($middleware);
         }
 
         return new Client(['handler' => $handlerStack]);
