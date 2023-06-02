@@ -79,6 +79,13 @@ class ClientBuilderTest extends TestCase
         $this->getMockedClient()->request('GET', '/not/existing/route');
     }
 
+    public function testClientWithFullUrl(): void
+    {
+        $response = $this->getMockedClient()->request('GET', 'http://user:password@localhost:8099/country/?page=1&code=it');
+        $body     = (string) $response->getBody();
+        $this->assertEquals('{"id":"+39","code":"IT","name":"Italy"}', $body);
+    }
+
     public function testRelativeRoute(): void
     {
         $response = $this->getMockedClient()->request('GET', 'country/IT');
