@@ -44,6 +44,12 @@ class HandlerBuilder
     public function build(): callable
     {
         return function (RequestInterface $request): ResponseInterface {
+            $uri = $request->getUri()
+                ->withScheme('')
+                ->withHost('')
+                ->withPort(null)
+                ->withUserInfo('');
+
             $router = new Router();
             foreach ($this->routes as $route) {
                 $router->map(
@@ -61,7 +67,7 @@ class HandlerBuilder
             $serverRequest = $this->serverRequestFactory
                 ->createServerRequest(
                     $request->getMethod(),
-                    sprintf('/%s', ltrim($request->getUri()->__toString(), '/'))
+                    sprintf('/%s', ltrim($uri->__toString(), '/'))
                 );
 
             $serverRequest = $serverRequest->withBody($request->getBody());
