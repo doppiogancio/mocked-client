@@ -8,6 +8,7 @@ use DoppioGancio\MockedClient\HandlerBuilder;
 use DoppioGancio\MockedClient\MockedGuzzleClientBuilder;
 use DoppioGancio\MockedClient\Route\ConditionalRouteBuilder;
 use DoppioGancio\MockedClient\Route\RouteBuilder;
+use DoppioGancio\MockedClient\Tests\Middleware\Middleware;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\GuzzleException;
@@ -16,6 +17,7 @@ use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use Http\Discovery\Psr17FactoryDiscovery;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\RequestInterface;
 use Psr\Log\NullLogger;
 
 use function json_decode;
@@ -167,6 +169,13 @@ class HandlerStackBuilderTest extends TestCase
         $this->assertEquals('key1=value1&key2=value2', $body);
     }
 
+    public function testMiddlewares(): void
+    {
+        $response = $this->getMockedClient()->request('GET', '/middleware');
+        $body     = (string) $response->getBody();
+        $this->assertEquals('x-value', $body);
+    }
+
     private function getMockedClient(): Client
     {
         $this->handlerBuilder->addRoute(
@@ -240,7 +249,29 @@ class HandlerStackBuilderTest extends TestCase
                 ->build(),
         );
 
-        $clientBuilder = new MockedGuzzleClientBuilder($this->handlerBuilder, new NullLogger());
+        $this->handlerBuilder->addRoute(
+            $this->routeBuilder->new()
+                ->withMethod('GET')
+                ->withPath('/middleware')
+                ->withHandler(static function (Request $request): Response {
+                    return new Response(200, [], $request->getHeader('x-name')[0]);
+                })
+                ->build(),
+        );
+
+        $clientBuilder = new MockedGuzzleClientBuilder($this->handlerBuilder);
+
+        // Anonymous middleware
+        $clientBuilder->addMiddleware(new class ('x-name', 'x-value') extends Middleware {
+            public function __construct(private readonly string $header, private readonly string $value)
+            {
+            }
+
+            protected function mapRequest(RequestInterface $request): RequestInterface
+            {
+                return $request->withHeader($this->header, $this->value);
+            }
+        });
 
         return $clientBuilder->build();
     }

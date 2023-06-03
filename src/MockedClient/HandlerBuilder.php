@@ -7,10 +7,11 @@ namespace DoppioGancio\MockedClient;
 use Closure;
 use DoppioGancio\MockedClient\Exception\RouteNotFound;
 use DoppioGancio\MockedClient\Route\Route;
+use GuzzleHttp\Promise\FulfilledPromise;
+use GuzzleHttp\Promise\PromiseInterface;
 use League\Route\Http\Exception\NotFoundException;
 use League\Route\Router;
 use Psr\Http\Message\RequestInterface;
-use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestFactoryInterface;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -38,7 +39,7 @@ class HandlerBuilder
 
     public function build(): Closure
     {
-        return function (RequestInterface $request): ResponseInterface {
+        return function (RequestInterface $request): PromiseInterface {
             $router = new Router();
             foreach ($this->routes as $route) {
                 $router->map(
@@ -79,7 +80,7 @@ class HandlerBuilder
                     ],
                 );
 
-                return $response;
+                return new FulfilledPromise($response);
             } catch (NotFoundException $e) {
                 $this->logError($e, $request);
 

@@ -5,60 +5,37 @@ declare(strict_types=1);
 namespace DoppioGancio\MockedClient;
 
 use GuzzleHttp\Client;
-use GuzzleHttp\Exception\ClientException;
-use GuzzleHttp\Exception\ServerException;
 use GuzzleHttp\HandlerStack;
-use GuzzleHttp\MessageFormatter;
-use GuzzleHttp\Middleware;
-use GuzzleHttp\Promise\FulfilledPromise;
-use GuzzleHttp\Promise\PromiseInterface;
-use GuzzleHttp\Psr7\Response;
-use Psr\Http\Message\RequestInterface;
-use Psr\Log\LoggerInterface;
-
-use function assert;
 
 class MockedGuzzleClientBuilder
 {
+    /** @param array<callable> $middlewares */
     public function __construct(
         private readonly HandlerBuilder $handlerBuilder,
-        private readonly LoggerInterface $logger,
+        private array $middlewares = [],
     ) {
     }
 
-    public function build(): Client
+    public function addMiddleware(callable $middleware): self
+    {
+        $this->middlewares[] = $middleware;
+
+        return $this;
+    }
+
+    /** @param array<string,mixed> $options */
+    public function build(array $options = []): Client
     {
         $handler = $this->handlerBuilder->build();
 
-        $callback = static function (RequestInterface $request) use ($handler): PromiseInterface {
-            $response = $handler($request);
-            assert($response instanceof Response);
-            if ($response->getStatusCode() >= 400 && $response->getStatusCode() < 500) {
-                throw new ClientException(
-                    $response->getBody()->getContents(),
-                    $request,
-                    $response,
-                );
-            }
+        $handlerStack = HandlerStack::create($handler);
 
-            if ($response->getStatusCode() >= 500 && $response->getStatusCode() < 600) {
-                throw new ServerException(
-                    $response->getBody()->getContents(),
-                    $request,
-                    $response,
-                );
-            }
+        foreach ($this->middlewares as $middleware) {
+            $handlerStack->push($middleware);
+        }
 
-            return new FulfilledPromise($response);
-        };
+        $options['handler'] = $handlerStack;
 
-        $handlerStack = new HandlerStack($callback);
-
-        $handlerStack->push(Middleware::log(
-            $this->logger,
-            new MessageFormatter(),
-        ));
-
-        return new Client(['handler' => $handlerStack]);
+        return new Client($options);
     }
 }
