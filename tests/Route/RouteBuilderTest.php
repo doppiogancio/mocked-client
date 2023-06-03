@@ -18,10 +18,7 @@ class RouteBuilderTest extends TestCase
 {
     public function testRoute(): void
     {
-        $builder = new RouteBuilder(
-            Psr17FactoryDiscovery::findResponseFactory(),
-            Psr17FactoryDiscovery::findStreamFactory(),
-        );
+        $builder = $this->getRouteBuilder();
 
         $route = $builder
             ->withMethod('GET')
@@ -34,12 +31,47 @@ class RouteBuilderTest extends TestCase
         $this->assertEquals(123, $response->getStatusCode());
     }
 
+    public function testRequestWithHeaders(): void
+    {
+        $builder = $this->getRouteBuilder();
+
+        $route = $builder
+            ->withMethod('GET')
+            ->withPath('/header')
+            ->withHandler(static function (Request $request): Response {
+                return new Response(200, [], $request->getHeaderLine('test-header'));
+            })
+            ->build();
+
+        $request  = (new Request('GET', '/header'))->withHeader('test-header', 'test-value');
+        $response = $route->getHandler()($request);
+        assert($response instanceof ResponseInterface);
+        $this->assertEquals('test-value', $response->getBody()->getContents());
+    }
+
+    public function testRequestWithBody(): void
+    {
+        $builder = $this->getRouteBuilder();
+
+        $route = $builder
+            ->withMethod('POST')
+            ->withPath('/body')
+            ->withHandler(static function (Request $request): Response {
+                return new Response(200, [], $request->getBody()->getContents());
+            })
+            ->build();
+
+        $request  = (new Request('GET', '/body'))->withBody(
+            Psr17FactoryDiscovery::findStreamFactory()->createStream('{"key": "value"}'),
+        );
+        $response = $route->getHandler()($request);
+        assert($response instanceof ResponseInterface);
+        $this->assertEquals('{"key": "value"}', $response->getBody()->getContents());
+    }
+
     public function testRouteWithHandler(): void
     {
-        $builder = new RouteBuilder(
-            Psr17FactoryDiscovery::findResponseFactory(),
-            Psr17FactoryDiscovery::findStreamFactory(),
-        );
+        $builder = $this->getRouteBuilder();
 
         $route = $builder
             ->withMethod('GET')
@@ -63,11 +95,16 @@ class RouteBuilderTest extends TestCase
     {
         $this->expectExceptionMessage('Set parameter \"method\" before to build');
 
-        $builder = new RouteBuilder(
+        $builder = $this->getRouteBuilder();
+
+        $builder->withPath('/country')->build();
+    }
+
+    private function getRouteBuilder(): RouteBuilder
+    {
+        return new RouteBuilder(
             Psr17FactoryDiscovery::findResponseFactory(),
             Psr17FactoryDiscovery::findStreamFactory(),
         );
-
-        $builder->withPath('/country')->build();
     }
 }
