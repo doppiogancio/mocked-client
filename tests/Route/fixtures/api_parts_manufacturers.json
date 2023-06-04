@@ -1,0 +1,18 @@
+{
+  "manufacturers": [
+    {
+      "value": "a-1111",
+      "label": "Manufacturer #1, Inc.",
+      "count": 12,
+      "categoryCount": 4,
+      "partsWithOffersCount": 1111
+    },
+    {
+      "value": "b-222",
+      "label": "Manufacturer #2, Inc.",
+      "count": 22,
+      "categoryCount": 5,
+      "partsWithOffersCount": 2222
+    }
+  ]
+}

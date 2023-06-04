@@ -2,12 +2,13 @@
 
 declare(strict_types=1);
 
-namespace DoppioGancio\MockedClient;
+namespace DoppioGancio\MockedClient\Guzzle;
 
+use DoppioGancio\MockedClient\HandlerBuilder;
 use GuzzleHttp\Client;
 use GuzzleHttp\HandlerStack;
 
-class MockedGuzzleClientBuilder
+class ClientBuilder
 {
     /** @param array<callable> $middlewares */
     public function __construct(

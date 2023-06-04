@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace DoppioGancio\MockedClient\Tests\Middleware;
+namespace DoppioGancio\MockedClient\Guzzle\Middleware;
 
 use GuzzleHttp\Promise\PromiseInterface;
 use Psr\Http\Message\RequestInterface;

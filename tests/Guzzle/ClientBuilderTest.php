@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace DoppioGancio\MockedClient\Tests;
+namespace DoppioGancio\MockedClient\Tests\Guzzle;
 
 use DoppioGancio\MockedClient\HandlerBuilder;
-use DoppioGancio\MockedClient\MockedGuzzleClientBuilder;
+use DoppioGancio\MockedClient\Guzzle\ClientBuilder;
 use DoppioGancio\MockedClient\Route\ConditionalRouteBuilder;
 use DoppioGancio\MockedClient\Route\RouteBuilder;
-use DoppioGancio\MockedClient\Tests\Middleware\Middleware;
+use DoppioGancio\MockedClient\Guzzle\Middleware\Middleware;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\GuzzleException;
@@ -22,7 +22,7 @@ use Psr\Log\NullLogger;
 
 use function json_decode;
 
-class HandlerStackBuilderTest extends TestCase
+class ClientBuilderTest extends TestCase
 {
     private HandlerBuilder $handlerBuilder;
     private RouteBuilder $routeBuilder;
@@ -259,7 +259,7 @@ class HandlerStackBuilderTest extends TestCase
                 ->build(),
         );
 
-        $clientBuilder = new MockedGuzzleClientBuilder($this->handlerBuilder);
+        $clientBuilder = new ClientBuilder($this->handlerBuilder);
 
         // Anonymous middleware
         $clientBuilder->addMiddleware(new class ('x-name', 'x-value') extends Middleware {

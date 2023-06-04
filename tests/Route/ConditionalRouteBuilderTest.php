@@ -46,7 +46,7 @@ class ConditionalRouteBuilderTest extends TestCase
             ->withConditionalResponse('page=2&code=it', new Response(201))
             ->withConditionalResponse('code=de', new Response(301))
             ->withConditionalResponse('page=4', new Response(401))
-            ->withDefaultFileResponse(__DIR__ . '/../fixtures/countries.json')
+            ->withDefaultFileResponse(__DIR__ . '/fixtures/countries.json')
             ->build();
 
         $response = $route->getHandler()(new Request('GET', '/country?nonce=12345&code=fr&page=3'));
@@ -72,7 +72,7 @@ class ConditionalRouteBuilderTest extends TestCase
             )
             ->withConditionalFileResponse(
                 'filters%5BhasContent%5D=1',
-                __DIR__ . '/../fixtures/api_parts_manufacturers.json',
+                __DIR__ . '/fixtures/api_parts_manufacturers.json',
             )
             ->build();
 
