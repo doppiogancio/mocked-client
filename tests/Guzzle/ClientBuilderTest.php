@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace DoppioGancio\MockedClient\Tests\Guzzle;
 
-use DoppioGancio\MockedClient\HandlerBuilder;
 use DoppioGancio\MockedClient\Guzzle\ClientBuilder;
+use DoppioGancio\MockedClient\Guzzle\Middleware\Middleware;
+use DoppioGancio\MockedClient\HandlerBuilder;
 use DoppioGancio\MockedClient\Route\ConditionalRouteBuilder;
 use DoppioGancio\MockedClient\Route\RouteBuilder;
-use DoppioGancio\MockedClient\Guzzle\Middleware\Middleware;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\GuzzleException;
