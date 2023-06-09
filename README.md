@@ -15,9 +15,10 @@ $ composer require doppiogancio/mocked-client guzzlehttp/guzzle php-http/discove
 This version requires a minimum PHP version 8.1
 
 ## How to mock a client
+
 ```php
 use DoppioGancio\MockedClient\HandlerBuilder;
-use DoppioGancio\MockedClient\MockedGuzzleClientBuilder;
+use DoppioGancio\MockedClient\ClientBuilder;
 use DoppioGancio\MockedClient\Route\RouteBuilder;
 use GuzzleHttp\Psr7\Response;
 use Http\Discovery\Psr17FactoryDiscovery;
@@ -70,7 +71,7 @@ $handlerBuilder->addRoute(
         ->build()
 );
 
-$clientBuilder = new MockedGuzzleClientBuilder($handlerBuilder, new NullLogger());
+$clientBuilder = new ClientBuilder($handlerBuilder, new NullLogger());
 $client = $clientBuilder->build();
 ```
 
@@ -102,7 +103,7 @@ $handlerBuilder = new HandlerBuilder(
 
 // don't add any route for now...
 
-$clientBuilder = new MockedGuzzleClientBuilder($handlerBuilder);
+$clientBuilder = new ClientBuilder($handlerBuilder);
 $client = $clientBuilder->build();
 ```
 
