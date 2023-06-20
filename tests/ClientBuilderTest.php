@@ -81,8 +81,12 @@ class ClientBuilderTest extends TestCase
 
     public function testClientWithFullUrl(): void
     {
-        $response = $this->getMockedClient()->request('GET', 'http://user:password@localhost:8099/country/?page=1&code=it');
-        $body     = (string) $response->getBody();
+        $response = $this->getMockedClient()->request(
+            'GET',
+            'http://user:password@localhost:8099/country/?page=1&code=it'
+        );
+
+        $body = (string) $response->getBody();
         $this->assertEquals('{"id":"+39","code":"IT","name":"Italy"}', $body);
     }
 
