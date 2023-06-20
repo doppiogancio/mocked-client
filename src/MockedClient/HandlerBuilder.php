@@ -6,10 +6,11 @@ namespace DoppioGancio\MockedClient;
 
 use DoppioGancio\MockedClient\Exception\RouteNotFound;
 use DoppioGancio\MockedClient\Route\Route;
+use GuzzleHttp\Promise\FulfilledPromise;
+use GuzzleHttp\Promise\PromiseInterface;
 use League\Route\Http\Exception\NotFoundException;
 use League\Route\Router;
 use Psr\Http\Message\RequestInterface;
-use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestFactoryInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -39,11 +40,11 @@ class HandlerBuilder
     }
 
     /**
-     * @return callable(RequestInterface): ResponseInterface
+     * @return callable(RequestInterface): PromiseInterface
      */
     public function build(): callable
     {
-        return function (RequestInterface $request): ResponseInterface {
+        return function (RequestInterface $request): PromiseInterface {
             $uri = $request->getUri()
                 ->withScheme('')
                 ->withHost('')
@@ -90,7 +91,7 @@ class HandlerBuilder
                     ]
                 );
 
-                return $response;
+                return new FulfilledPromise($response);
             } catch (NotFoundException $e) {
                 $this->logError($e, $request);
 
