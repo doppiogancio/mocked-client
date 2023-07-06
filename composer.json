@@ -24,7 +24,7 @@
     "require-dev": {
         "php-http/discovery": "^1.13",
         "guzzlehttp/guzzle": "^6.0|^7.0",
-        "phpunit/phpunit": "^9.5",
+        "phpunit/phpunit": "^9.5|^10",
         "squizlabs/php_codesniffer": "*",
         "slevomat/coding-standard": "^7.0",
         "phpstan/phpstan": "^0.12.94",
