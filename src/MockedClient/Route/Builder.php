@@ -14,6 +14,7 @@ use Psr\Http\Message\StreamFactoryInterface;
 use function assert;
 use function fopen;
 use function is_resource;
+use function sprintf;
 
 abstract class Builder
 {
@@ -61,7 +62,7 @@ abstract class Builder
     protected function buildResponseFromFile(string $file, int $httpStatus, array $headers): ResponseInterface
     {
         $fp = fopen($file, 'rb');
-        assert(is_resource($fp));
+        assert(is_resource($fp), sprintf('File not found: %s', $file));
         $response = $this->responseFactory
             ->createResponse($httpStatus)
             ->withBody($this->streamFactory->createStreamFromResource($fp));
