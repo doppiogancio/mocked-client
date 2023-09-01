@@ -24,8 +24,6 @@ use GuzzleHttp\Psr7\Response;
 use Http\Discovery\Psr17FactoryDiscovery;
 use Psr\Log\NullLogger;
 
-require_once "vendor/autoload.php";
-
 $handlerBuilder = new HandlerBuilder(
     Psr17FactoryDiscovery::findServerRequestFactory(),
     new NullLogger()
@@ -45,35 +43,16 @@ $handlerBuilder->addRoute(
         ->build()
 );
 
-// Route with File
-$handlerBuilder->addRoute(
-    $route->new()
-        ->withMethod('GET')
-        ->withPath('/country/DE')
-        ->withFileResponse(
-            file: __DIR__ . '/fixtures/country.json',
-            httpStatus: 201,
-            headers: ['content-type' => 'application/json']
-        )
-        ->build()
-);
 
-// Route with String
-$handlerBuilder->addRoute(
-    $route->new()
-        ->withMethod('GET')
-        ->withPath('/country/FR')
-        ->withStringResponse(
-            content: '{"id":"+33","code":"FR","name":"France"}',
-            httpStatus: 201,
-            headers: ['content-type' => 'application/json']
-        )
-        ->build()
-);
-
-$clientBuilder = new ClientBuilder($handlerBuilder, new NullLogger());
+$clientBuilder = new ClientBuilder($handlerBuilder);
 $client = $clientBuilder->build();
 ```
+
+### Advanced examples
+1. [Route with a file](docs/route-with-file-response.md)
+2. [Route with a string](./docs/route-with-string-response.md)
+3. [Route with consecutive calls](./docs/route-with-consecutive-calls.md)
+4. [Guzzle client with middlewares](./docs/route-with-consecutive-calls.md)
 
 ## How to use the client
 ```php
