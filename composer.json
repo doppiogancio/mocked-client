@@ -14,7 +14,7 @@
     "require": {
         "php": "^8.1",
         "league/route": "^5.1.2",
-        "psr/log": "^3.0",
+        "psr/log": "^2.0|^3.0",
         "psr/http-factory": "^1.0"
     },
     "require-dev": {
