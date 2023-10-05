@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace DoppioGancio\MockedClient\Tests\Route;
 
 use DoppioGancio\MockedClient\Route\CallbackRouteBuilder;
+use DoppioGancio\MockedClient\Route\Exception\ResponseNotFound;
 use GuzzleHttp\Psr7\Request;
 use Http\Discovery\Psr17FactoryDiscovery;
 use PHPUnit\Framework\TestCase;
@@ -29,14 +30,13 @@ class CallbackRouteBuilderTest extends TestCase
             ->withStringResponse(static function (RequestInterface $request): bool {
                 parse_str($request->getUri()->getQuery(), $requestParameters);
 
-                return $requestParameters['code'] === 'AU';
+                return ($requestParameters['code'] ?? '') === 'AU';
             }, '{"id":"+43","code":"AU","name":"Austria"}')
             ->withStringResponse(static function (RequestInterface $request): bool {
                 parse_str($request->getUri()->getQuery(), $requestParameters);
 
-                return $requestParameters['code'] === 'IT';
+                return ($requestParameters['code'] ?? '') === 'IT';
             }, '{"id":"+39","code":"IT","name":"Italy"}')
-            //->withStringResponse('{"id":"+39","code":"IT","name":"Italy"}')
             ->build();
 
         // Request #1
@@ -56,8 +56,9 @@ class CallbackRouteBuilderTest extends TestCase
 
         $data = json_decode($response->getBody()->getContents(), true);
         $this->assertEquals('Italy', $data['name']);
-//        // Request #3 - Called too many times
-//        $this->expectException(TooManyConsecutiveCalls::class);
-//        $route->getHandler()(new Request('GET', '/country'));
+
+        // Request #3 - Response not found
+        $this->expectException(ResponseNotFound::class);
+        $route->getHandler()(new Request('GET', '/country'));
     }
 }
