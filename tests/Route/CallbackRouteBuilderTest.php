@@ -27,16 +27,14 @@ class CallbackRouteBuilderTest extends TestCase
 
         $route = $builder->withMethod('GET')
             ->withPath('/country')
-            ->withStringResponse(static function (RequestInterface $request): bool {
-                parse_str($request->getUri()->getQuery(), $requestParameters);
-
-                return ($requestParameters['code'] ?? '') === 'AU';
-            }, '{"id":"+43","code":"AU","name":"Austria"}')
-            ->withStringResponse(static function (RequestInterface $request): bool {
-                parse_str($request->getUri()->getQuery(), $requestParameters);
-
-                return ($requestParameters['code'] ?? '') === 'IT';
-            }, '{"id":"+39","code":"IT","name":"Italy"}')
+            ->withStringResponse(
+                $this->checkCountry('AU'),
+                '{"id":"+43","code":"AU","name":"Austria"}',
+            )
+            ->withStringResponse(
+                $this->checkCountry('IT'),
+                '{"id":"+39","code":"IT","name":"Italy"}',
+            )
             ->build();
 
         // Request #1
@@ -60,5 +58,15 @@ class CallbackRouteBuilderTest extends TestCase
         // Request #3 - Response not found
         $this->expectException(ResponseNotFound::class);
         $route->getHandler()(new Request('GET', '/country'));
+    }
+
+    /** @return callable(RequestInterface $request):bool */
+    private function checkCountry(string $countryCode): callable
+    {
+        return static function (RequestInterface $request) use ($countryCode): bool {
+            parse_str($request->getUri()->getQuery(), $requestParameters);
+
+            return ($requestParameters['code'] ?? '') === $countryCode;
+        };
     }
 }
