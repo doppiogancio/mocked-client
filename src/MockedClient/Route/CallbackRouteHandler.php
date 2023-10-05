@@ -10,7 +10,7 @@ use Psr\Http\Message\ResponseInterface;
 
 class CallbackRouteHandler
 {
-    /** @param array<array{'callback': callable(RequestInterface $request):bool, 'response': ResponseInterface}> $responses */
+    /** @param CallbackResponse[] $responses */
     public function __construct(private readonly array $responses)
     {
     }
@@ -18,8 +18,8 @@ class CallbackRouteHandler
     public function __invoke(RequestInterface $request): ResponseInterface
     {
         foreach ($this->responses as $couple) {
-            if ($couple['callback']($request)) {
-                return $couple['response'];
+            if ($couple->getCallback()($request)) {
+                return $couple->getResponse();
             }
         }
 

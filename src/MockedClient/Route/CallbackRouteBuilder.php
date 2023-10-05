@@ -9,7 +9,7 @@ use Psr\Http\Message\ResponseInterface;
 
 class CallbackRouteBuilder extends Builder
 {
-    /** @var array<array{'callback': callable(RequestInterface $request):bool, 'response': ResponseInterface}>  */
+    /** @var CallbackResponse[]  */
     private array $responses = [];
 
     public function new(): self
@@ -54,10 +54,7 @@ class CallbackRouteBuilder extends Builder
      */
     public function withResponse(callable $callback, ResponseInterface $response): self
     {
-        $this->responses[] = [
-            'callback' => $callback,
-            'response' => $response,
-        ];
+        $this->responses[] = new CallbackResponse($callback, $response);
 
         return $this;
     }
