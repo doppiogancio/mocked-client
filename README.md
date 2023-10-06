@@ -52,7 +52,8 @@ $client = $clientBuilder->build();
 1. [Route with a file](./docs/route-with-file-response.md)
 2. [Route with a string](./docs/route-with-string-response.md)
 3. [Route with consecutive calls](./docs/route-with-consecutive-calls.md)
-4. [Guzzle client with middlewares](./docs/route-with-consecutive-calls.md)
+4. [Route with callbacks](./docs/route-with-callbacks.md)
+5. [Guzzle client with middlewares](./docs/route-with-consecutive-calls.md)
 
 ## How to use the client
 ```php
