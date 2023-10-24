@@ -9,6 +9,7 @@ use DoppioGancio\MockedClient\Exception\RouteNotFound;
 use DoppioGancio\MockedClient\Route\Route;
 use GuzzleHttp\Promise\FulfilledPromise;
 use GuzzleHttp\Promise\PromiseInterface;
+use GuzzleHttp\Psr7\Uri;
 use League\Route\Http\Exception\NotFoundException;
 use League\Route\Router;
 use Psr\Http\Message\RequestInterface;
@@ -54,10 +55,16 @@ class HandlerBuilder
                 ['request' => $request],
             );
 
+            // Avoid that a random host will cause issues
+            $uri = new Uri();
+            $uri = $uri->withPath($request->getUri()->getPath());
+            $uri = $uri->withQuery($request->getUri()->getQuery());
+            $uri = $uri->withFragment($request->getUri()->getFragment());
+
             $serverRequest = $this->serverRequestFactory
                 ->createServerRequest(
                     $request->getMethod(),
-                    sprintf('/%s', ltrim($request->getUri()->__toString(), '/')),
+                    sprintf('/%s', ltrim($uri->__toString(), '/')),
                 );
 
             $serverRequest = $serverRequest->withBody($request->getBody());

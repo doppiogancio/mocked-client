@@ -98,6 +98,7 @@ class ConditionalRouteBuilder extends Builder
     {
         return function (RequestInterface $request): ResponseInterface {
             parse_str($request->getUri()->getQuery(), $requestParameters);
+
             foreach ($this->responses as $conditionalResponse) {
                 if ($conditionalResponse->matchAgainst($requestParameters)) {
                     return $conditionalResponse->response;

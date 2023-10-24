@@ -52,7 +52,7 @@ class ClientBuilderTest extends TestCase
     /** @throws GuzzleException */
     public function testClientWithBaseRoute(): void
     {
-        $response = $this->getMockedClient()->request('GET', '/country/IT');
+        $response = $this->getMockedClient()->request('GET', 'http://www.any.com/country/IT');
         $body     = (string) $response->getBody();
         $this->assertEquals('{"id":"+39","code":"IT","name":"Italy"}', $body);
     }
@@ -62,6 +62,7 @@ class ClientBuilderTest extends TestCase
     {
         $response = $this->getMockedClient()->request('GET', '/country/?page=1&code=it');
         $body     = (string) $response->getBody();
+
         $this->assertEquals('{"id":"+39","code":"IT","name":"Italy"}', $body);
     }
 
@@ -184,7 +185,6 @@ class ClientBuilderTest extends TestCase
                 ->withPath('/country/')
                 ->withConditionalResponse('code=de', new Response(200, [], '{"id":"+49","code":"DE","name":"Germany"}'))
                 ->withConditionalResponse('code=it', new Response(200, [], '{"id":"+39","code":"IT","name":"Italy"}'))
-                ->withDefaultStringResponse('{}')
                 ->withDefaultFileResponse(__DIR__ . '/fixtures/countries.json')
                 ->build(),
         );
