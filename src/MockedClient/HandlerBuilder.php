@@ -25,6 +25,10 @@ class HandlerBuilder
     /** @var Route[] */
     private array $routes = [];
 
+    private ?Router $router = null;
+
+    private bool $built = false;
+
     public function __construct(
         private readonly ServerRequestFactoryInterface $serverRequestFactory,
         private readonly LoggerInterface $logger,
@@ -33,6 +37,10 @@ class HandlerBuilder
 
     public function addRoute(Route $route): self
     {
+        if ($this->built) {
+            throw new \LogicException('Cannot add a route after the handler has been built.');
+        }
+
         $this->routes[] = $route;
 
         return $this;
@@ -40,14 +48,24 @@ class HandlerBuilder
 
     public function build(): Closure
     {
-        return function (RequestInterface $request): PromiseInterface {
-            $router = new Router();
+        if (!$this->built) {
+            $this->router = new Router();
             foreach ($this->routes as $route) {
-                $router->map(
+                $this->router->map(
                     $route->method,
                     $route->path,
                     $route->handler,
                 );
+            }
+
+            $this->built = true;
+        }
+
+        $router = $this->router;
+
+        return function (RequestInterface $request) use ($router): PromiseInterface {
+            if ($router === null) {
+                throw new \LogicException('The router has not been initialized.');
             }
 
             $this->logger->debug(

@@ -16,6 +16,7 @@ use GuzzleHttp\Exception\ServerException;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use Http\Discovery\Psr17FactoryDiscovery;
+use LogicException;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
 use Psr\Log\NullLogger;
@@ -175,6 +176,47 @@ class ClientBuilderTest extends TestCase
         $response = $this->getMockedClient()->request('GET', '/middleware');
         $body     = (string) $response->getBody();
         $this->assertEquals('x-value', $body);
+    }
+
+    public function testRoutesAreImmutableAfterBuild(): void
+    {
+        $this->handlerBuilder->addRoute(
+            $this->routeBuilder->new()
+                ->withMethod('GET')
+                ->withPath('/immutable')
+                ->withResponse(new Response(200))
+                ->build(),
+        );
+
+        (new ClientBuilder($this->handlerBuilder))->build();
+
+        $this->expectException(LogicException::class);
+        $this->handlerBuilder->addRoute(
+            $this->routeBuilder->new()
+                ->withMethod('GET')
+                ->withPath('/should-fail')
+                ->withResponse(new Response(200))
+                ->build(),
+        );
+    }
+
+    public function testRouterIsReusedAcrossClientBuilds(): void
+    {
+        $this->handlerBuilder->addRoute(
+            $this->routeBuilder->new()
+                ->withMethod('GET')
+                ->withPath('/reused')
+                ->withResponse(new Response(201))
+                ->build(),
+        );
+
+        $clientBuilder = new ClientBuilder($this->handlerBuilder);
+
+        $firstClient  = $clientBuilder->build();
+        $secondClient = $clientBuilder->build();
+
+        $this->assertSame(201, $firstClient->request('GET', '/reused')->getStatusCode());
+        $this->assertSame(201, $secondClient->request('GET', '/reused')->getStatusCode());
     }
 
     private function getMockedClient(): Client
