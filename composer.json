@@ -37,7 +37,8 @@
     ],
     "autoload": {
         "psr-4": {
-            "DoppioGancio\\MockedClient\\": "src/MockedClient"
+            "DoppioGancio\\MockedClient\\": "src/MockedClient",
+            "App\\": "src/App"
         }
     },
     "autoload-dev": {

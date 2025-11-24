@@ -1,8 +1,6 @@
 <?php
 
-declare(strict_types=1);
-
-namespace DoppioGancio\MockedClient\Entity;
+namespace App\Entity\Fortech;
 
 use Doctrine\ORM\Mapping as ORM;
 
@@ -15,13 +13,8 @@ class Station
     #[ORM\Column(type: 'integer')]
     private ?int $id = null;
 
-    #[ORM\Column(name: 'brin_id', type: 'integer', options: ['default' => 0])]
+    #[ORM\Column(type: 'integer', options: ['default' => 0])]
     private int $brinId = 0;
-
-    public function __construct(int $brinId)
-    {
-        $this->brinId = $brinId;
-    }
 
     public function getId(): ?int
     {
@@ -33,8 +26,10 @@ class Station
         return $this->brinId;
     }
 
-    public function setBrinId(int $brinId): void
+    public function setBrinId(int $brinId): self
     {
         $this->brinId = $brinId;
+
+        return $this;
     }
 }
