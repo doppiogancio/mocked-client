@@ -1,0 +1,5 @@
+CREATE TABLE stazioni (
+    id INT AUTO_INCREMENT NOT NULL,
+    brin_id INT DEFAULT 0 NOT NULL,
+    PRIMARY KEY(id)
+);
