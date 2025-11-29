@@ -96,11 +96,51 @@ DoppioGancio\MockedClient\Exception\RouteNotFound: Mocked route GET /admin/dashb
 ```
 
 ### Inject the client in the service container
-If you have a service container, add the client to it, so that every service depending on it will be able to auto wire.
-```php
-self::$container->set(Client::class, $client);
+If you have a service container, add the client to it, so that every service depending on it will be able to auto wire. In Symfony
+tests it is handy to wrap the setup in a private helper to keep fixtures close to your test logic and let services pull the client
+from the container by name.
 
-// In Symfony
-self::$container->set('eight_points_guzzle.client.my_client', $client);
+```php
+use DoppioGancio\MockedClient\HandlerBuilder;
+use DoppioGancio\MockedClient\ClientBuilder;
+use DoppioGancio\MockedClient\Route\RouteBuilder;
+use GuzzleHttp\Psr7\Response;
+use Http\Discovery\Psr17FactoryDiscovery;
+use Psr\Log\NullLogger;
+
+private function injectGoogleApiClient(string $fixturePath): void
+{
+    $handlerBuilder = new HandlerBuilder(
+        Psr17FactoryDiscovery::findServerRequestFactory(),
+        new NullLogger(),
+    );
+
+    $route = new RouteBuilder(
+        Psr17FactoryDiscovery::findResponseFactory(),
+        Psr17FactoryDiscovery::findStreamFactory(),
+    );
+
+    $handlerBuilder->addRoute(
+        $route->new()
+            ->withMethod('GET')
+            ->withPath('/external/resource')
+            ->withResponse(new Response(200, [], file_get_contents($fixturePath)))
+            ->build()
+    );
+
+    $clientBuilder = new ClientBuilder($handlerBuilder);
+    $mockedClient = $clientBuilder->build();
+
+    self::getContainer()->set('eight_points_guzzle.client.google_api', $mockedClient);
+}
 ```
+
+Benefits:
+
+- Every service depending on `eight_points_guzzle.client.google_api` keeps working via autowiring.
+- Complex responses can be loaded from JSON fixtures (even copied from real API calls), which also exercises your
+  deserialization logic instead of hand-crafting PHP unit mocks.
+
+For non-Symfony projects, you can apply the same approach by registering `$mockedClient` in your DI container using the class
+name or service identifier your application expects.
 
