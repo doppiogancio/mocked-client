@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace DoppioGancio\MockedClient\Tests\Psr18;
 
 use DoppioGancio\MockedClient\Psr18\Client;
-use DoppioGancio\MockedClient\Route\RouteBuilder;
+use DoppioGancio\MockedClient\RequestHandler;
+use DoppioGancio\MockedClient\Route\Route;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use Http\Discovery\Psr17FactoryDiscovery;
@@ -17,22 +18,10 @@ class ClientTest extends TestCase
 {
     public function testSendRequestWithoutGuzzle(): void
     {
-        $client = new Client(
-            Psr17FactoryDiscovery::findServerRequestFactory(),
-            new NullLogger(),
-        );
-
-        $routeBuilder = new RouteBuilder(
-            Psr17FactoryDiscovery::findResponseFactory(),
-            Psr17FactoryDiscovery::findStreamFactory(),
-        );
+        $client = $this->client();
 
         $client->addRoute(
-            $routeBuilder
-                ->withMethod('GET')
-                ->withPath('/country/IT')
-                ->withResponse(new Response(200, [], '{"code":"IT"}'))
-                ->build(),
+            new Route('GET', '/country/IT', static fn () => new Response(200, [], '{"code":"IT"}')),
         );
 
         $response = $client->sendRequest(new Request('GET', '/country/IT'));
@@ -43,12 +32,17 @@ class ClientTest extends TestCase
 
     public function testSendRequestThrowsClientExceptionInterface(): void
     {
-        $client = new Client(
-            Psr17FactoryDiscovery::findServerRequestFactory(),
-            new NullLogger(),
-        );
-
         $this->expectException(ClientExceptionInterface::class);
-        $client->sendRequest(new Request('GET', '/not/existing/route'));
+        $this->client()->sendRequest(new Request('GET', '/not/existing/route'));
+    }
+
+    private function client(): Client
+    {
+        return new Client(
+            new RequestHandler(
+                Psr17FactoryDiscovery::findServerRequestFactory(),
+                new NullLogger(),
+            ),
+        );
     }
 }

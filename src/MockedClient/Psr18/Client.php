@@ -9,8 +9,6 @@ use DoppioGancio\MockedClient\Route\Route;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestFactoryInterface;
-use Psr\Log\LoggerInterface;
 
 /**
  * A PSR-18 mocked client with no dependency on Guzzle: useful with any
@@ -18,13 +16,8 @@ use Psr\Log\LoggerInterface;
  */
 class Client implements ClientInterface
 {
-    private readonly RequestHandler $requestHandler;
-
-    public function __construct(
-        ServerRequestFactoryInterface $serverRequestFactory,
-        LoggerInterface $logger,
-    ) {
-        $this->requestHandler = new RequestHandler($serverRequestFactory, $logger);
+    public function __construct(private readonly RequestHandler $requestHandler)
+    {
     }
 
     public function addRoute(Route $route): self

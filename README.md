@@ -2,7 +2,7 @@
 [![Packagist Downloads](https://img.shields.io/packagist/dm/doppiogancio/mocked-client)](https://packagist.org/packages/doppiogancio/mocked-client)
 
 # Mocked Client
-This package will help test components that depend on clients for HTTP calls. It ships a Guzzle integration out of the box, and a dependency-free PSR-18 client for anything else that speaks PSR-18.
+This package helps test components that depend on an HTTP client. Define your mocked routes once, then get either a mocked Guzzle client or a plain PSR-18 client out of them.
 
 ## Install
 Via Composer
@@ -23,78 +23,21 @@ This version requires a minimum PHP version 8.2
 ## How to mock a client
 
 ```php
-use DoppioGancio\MockedClient\Guzzle\HandlerBuilder;
-use DoppioGancio\MockedClient\Guzzle\ClientBuilder;
-use DoppioGancio\MockedClient\Route\RouteBuilder;
-use GuzzleHttp\Psr7\Response;
-use Http\Discovery\Psr17FactoryDiscovery;
-use Psr\Log\NullLogger;
+use DoppioGancio\MockedClient\MockedClient;
 
-$handlerBuilder = new HandlerBuilder(
-    Psr17FactoryDiscovery::findServerRequestFactory(),
-    new NullLogger()
-);
+$mockedClient = MockedClient::create();
 
-$route = new RouteBuilder(
-    Psr17FactoryDiscovery::findResponseFactory(),
-    Psr17FactoryDiscovery::findStreamFactory(),
-);
+$mockedClient->get('/country/IT')
+    ->respondWithJson(['id' => '+39', 'code' => 'IT', 'name' => 'Italy']);
 
-// Route with Response
-$handlerBuilder->addRoute(
-    $route->new()
-        ->withMethod('GET')
-        ->withPath('/country/IT')
-        ->withResponse(new Response(200, [], '{"id":"+39","code":"IT","name":"Italy"}'))
-        ->build()
-);
-
-
-$clientBuilder = new ClientBuilder($handlerBuilder);
-$client = $clientBuilder->build();
+$client = $mockedClient->guzzleClient();
 ```
 
-### Advanced examples
-1. [Route with a file](./docs/route-with-file-response.md)
-2. [Route with a string](./docs/route-with-string-response.md)
-3. [Route with consecutive calls](./docs/route-with-consecutive-calls.md)
-4. [Route with callbacks](./docs/route-with-callbacks.md)
-5. [Guzzle client with middlewares](./docs/route-with-consecutive-calls.md)
-
-## Mocking a plain PSR-18 client (no Guzzle required)
-If the code under test only depends on `Psr\Http\Client\ClientInterface`, you don't need Guzzle at all:
-
-```php
-use DoppioGancio\MockedClient\Psr18\Client;
-use DoppioGancio\MockedClient\Route\RouteBuilder;
-use GuzzleHttp\Psr7\Response;
-use Http\Discovery\Psr17FactoryDiscovery;
-use Psr\Log\NullLogger;
-
-$client = new Client(
-    Psr17FactoryDiscovery::findServerRequestFactory(),
-    new NullLogger()
-);
-
-$route = new RouteBuilder(
-    Psr17FactoryDiscovery::findResponseFactory(),
-    Psr17FactoryDiscovery::findStreamFactory(),
-);
-
-$client->addRoute(
-    $route->new()
-        ->withMethod('GET')
-        ->withPath('/country/IT')
-        ->withResponse(new Response(200, [], '{"id":"+39","code":"IT","name":"Italy"}'))
-        ->build()
-);
-
-$response = $client->sendRequest(Psr17FactoryDiscovery::findRequestFactory()->createRequest('GET', '/country/IT'));
-```
+That's it: `$client` is a real `GuzzleHttp\Client` that answers `GET /country/IT` with the JSON above, and throws `DoppioGancio\MockedClient\Exception\RouteNotFound` for anything else. `MockedClient::create()` discovers the PSR-17 factories for you via `php-http/discovery`; use `new MockedClient($responseFactory, $streamFactory)` if you want to provide your own.
 
 ## How to use the client
 ```php
-$response = $client->request('GET', '/country/DE/json');
+$response = $client->request('GET', '/country/IT');
 $body = (string) $response->getBody();
 $country = json_decode($body, true);
 
@@ -103,32 +46,66 @@ print_r($country);
 // will return
 Array
 (
-    [id] => +49
-    [code] => DE
-    [name] => Germany
+    [id] => +39
+    [code] => IT
+    [name] => Italy
 )
 ```
 
-## Some recommendations...
-### Fail Fast, Fail Often
-If you don't know in advance which routes are needed, don't worry, start with a client without routes, and let it suggests which routes to add.
+## Defining routes: one object, every mocking style
+`get()`/`post()`/`put()`/`patch()`/`delete()` (and `on($method, $path)` for anything else) return a `RouteExpectation`. Combine as many of these as you need on the same route:
+
 ```php
-$handlerBuilder = new HandlerBuilder(
-    Psr17FactoryDiscovery::findServerRequestFactory(),
-    new NullLogger()
-);
-
-// don't add any route for now...
-
-$clientBuilder = new ClientBuilder($handlerBuilder);
-$client = $clientBuilder->build();
+$mockedClient->get('/country')
+    // a query string that must match wins first
+    ->respondWhen('code=it', '{"id":"+39","code":"IT","name":"Italy"}')
+    ->respondWhen('code=de', '{"id":"+49","code":"DE","name":"Germany"}')
+    // otherwise, this is the fallback
+    ->respondWithFile(__DIR__ . '/fixtures/countries.json');
 ```
 
-Run the test: the test will fail, but it will suggest you the route that is missing. 
-By doing this, it will only specify the needed routes.
+1. [Respond with a string or a file](./docs/route-with-string-response.md)
+2. [Respond only when the query string matches](./docs/route-with-conditional-response.md)
+3. [Respond only when a callback matches the request](./docs/route-with-callbacks.md)
+4. [Respond with a different value on each consecutive call](./docs/route-with-consecutive-calls.md)
+5. [Guzzle client with middlewares](./docs/guzzle-client-with-middlewares.md)
+
+Need full control over the response? `respondUsing(Closure $handler)` gets the incoming PSR-7 request and builds the response yourself:
+
+```php
+$mockedClient->get('/echo-header')
+    ->respondUsing(fn ($request) => $responseFactory
+        ->createResponse(200)
+        ->withBody($streamFactory->createStream($request->getHeaderLine('x-request-id'))));
+```
+
+## Mocking a plain PSR-18 client (no Guzzle required)
+If the code under test only depends on `Psr\Http\Client\ClientInterface`, skip Guzzle entirely — same `MockedClient`, same routes:
+
+```php
+$mockedClient = MockedClient::create();
+$mockedClient->get('/country/IT')->respondWithJson(['code' => 'IT']);
+
+$client = $mockedClient->psr18Client();
+
+$response = $client->sendRequest($requestFactory->createRequest('GET', '/country/IT'));
+```
+
+You can even get both a Guzzle client and a PSR-18 client backed by the exact same routes from a single `MockedClient` instance.
+
+## Some recommendations...
+### Fail Fast, Fail Often
+If you don't know in advance which routes are needed, don't worry: start with a client with no routes and let it tell you which one is missing.
+```php
+$mockedClient = MockedClient::create();
+// don't add any route for now...
+$client = $mockedClient->guzzleClient();
+```
+
+Run the test: it will fail, but the exception tells you exactly which route to add — so you only ever define the routes you actually need.
 
 An example:
-```shell 
+```shell
 DoppioGancio\MockedClient\Exception\RouteNotFound: Mocked route GET /admin/dashboard not found
 ```
 
@@ -141,11 +118,12 @@ self::$container->set(Client::class, $client);
 self::$container->set('eight_points_guzzle.client.my_client', $client);
 ```
 
-## Upgrading from v4 to v5
-v5 is a breaking release focused on decoupling the core from Guzzle and modernising tooling. See [CHANGELOG.md](./CHANGELOG.md) for the full list of changes. In short:
-- Minimum PHP version is now 8.2.
-- `DoppioGancio\MockedClient\HandlerBuilder` moved to `DoppioGancio\MockedClient\Guzzle\HandlerBuilder`. Update your `use` statement, nothing else changes.
-- `DoppioGancio\MockedClient\Route\RouteBuilderFacade` (unused, empty class) was removed.
-- A missing file passed to `withFileResponse()` now throws `DoppioGancio\MockedClient\Route\Exception\FileNotFound` instead of relying on a runtime `assert()` (which could be silently disabled via `zend.assertions`).
-- New: `DoppioGancio\MockedClient\Psr18\Client`, a Guzzle-free PSR-18 client, for tests that don't use Guzzle.
+## Advanced: embedding the core in your own wiring
+`MockedClient` is a thin facade over a few independent pieces you can use directly if you need to:
+- `DoppioGancio\MockedClient\RequestHandler`: framework-agnostic core, turns a PSR-7 request into a PSR-7 response, no Guzzle dependency.
+- `DoppioGancio\MockedClient\Guzzle\HandlerBuilder` / `Guzzle\ClientBuilder`: adapt a `RequestHandler` to a Guzzle `HandlerStack`/`Client`.
+- `DoppioGancio\MockedClient\Psr18\Client`: adapt a `RequestHandler` to `Psr\Http\Client\ClientInterface` directly.
+- `DoppioGancio\MockedClient\RouteExpectation`: the fluent response builder returned by `MockedClient::get()` and friends; construct it yourself if you're building routes outside of `MockedClient`.
 
+## Upgrading from v4 to v5
+v5 is a breaking release that replaces the four separate route builders (`RouteBuilder`, `ConditionalRouteBuilder`, `ConsecutiveCallsRouteBuilder`, `CallbackRouteBuilder`) and the `HandlerBuilder`/`ClientBuilder` bootstrapping with the `MockedClient` facade and `RouteExpectation` described above. See [CHANGELOG.md](./CHANGELOG.md) for the full list of changes and a side-by-side migration example.

@@ -3,7 +3,5 @@ parameters:
     paths:
         - src/
         - tests/
-    ignoreErrors:
-        - '#Call to an undefined method#'
 includes:
     - vendor/phpstan/phpstan/conf/bleedingEdge.neon

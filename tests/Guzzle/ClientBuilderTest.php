@@ -4,49 +4,27 @@ declare(strict_types=1);
 
 namespace DoppioGancio\MockedClient\Tests\Guzzle;
 
-use DoppioGancio\MockedClient\Guzzle\ClientBuilder;
-use DoppioGancio\MockedClient\Guzzle\HandlerBuilder;
 use DoppioGancio\MockedClient\Guzzle\Middleware\Middleware;
-use DoppioGancio\MockedClient\Route\ConditionalRouteBuilder;
-use DoppioGancio\MockedClient\Route\RouteBuilder;
+use DoppioGancio\MockedClient\MockedClient;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\ServerException;
-use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
-use Http\Discovery\Psr17FactoryDiscovery;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
-use Psr\Log\NullLogger;
 
 use function json_decode;
 
 class ClientBuilderTest extends TestCase
 {
-    private HandlerBuilder $handlerBuilder;
-    private RouteBuilder $routeBuilder;
-
-    private ConditionalRouteBuilder $conditionalRouteBuilder;
+    private MockedClient $mockedClient;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->handlerBuilder = new HandlerBuilder(
-            Psr17FactoryDiscovery::findServerRequestFactory(),
-            new NullLogger(),
-        );
-
-        $this->routeBuilder = new RouteBuilder(
-            Psr17FactoryDiscovery::findResponseFactory(),
-            Psr17FactoryDiscovery::findStreamFactory(),
-        );
-
-        $this->conditionalRouteBuilder = new ConditionalRouteBuilder(
-            Psr17FactoryDiscovery::findResponseFactory(),
-            Psr17FactoryDiscovery::findStreamFactory(),
-        );
+        $this->mockedClient = MockedClient::create();
     }
 
     /** @throws GuzzleException */
@@ -128,15 +106,11 @@ class ClientBuilderTest extends TestCase
 
     public function testLazyBuiltHandler(): void
     {
-        $this->handlerBuilder->addRoute(
-            $this->routeBuilder->new()
-                ->withMethod('PATCH')
-                ->withPath('/lazy/builder')
-                ->withResponse(new Response(123))
-                ->build(),
-        );
+        $client = $this->getMockedClient();
 
-        $response = $this->getMockedClient()->request('PATCH', '/lazy/builder');
+        $this->mockedClient->patch('/lazy/builder')->respondWith('', 123);
+
+        $response = $client->request('PATCH', '/lazy/builder');
         $this->assertEquals(123, $response->getStatusCode());
     }
 
@@ -179,90 +153,43 @@ class ClientBuilderTest extends TestCase
 
     private function getMockedClient(): Client
     {
-        $this->handlerBuilder->addRoute(
-            $this->conditionalRouteBuilder->new()
-                ->withMethod('GET')
-                ->withPath('/country/')
-                ->withConditionalResponse('code=de', new Response(200, [], '{"id":"+49","code":"DE","name":"Germany"}'))
-                ->withConditionalResponse('code=it', new Response(200, [], '{"id":"+39","code":"IT","name":"Italy"}'))
-                ->withDefaultFileResponse(__DIR__ . '/fixtures/countries.json')
-                ->build(),
-        );
+        $this->mockedClient->get('/country/')
+            ->respondWhen('code=de', '{"id":"+49","code":"DE","name":"Germany"}')
+            ->respondWhen('code=it', '{"id":"+39","code":"IT","name":"Italy"}')
+            ->respondWithFile(__DIR__ . '/fixtures/countries.json');
 
-        $this->handlerBuilder->addRoute(
-            $this->routeBuilder->new()
-                ->withMethod('GET')
-                ->withPath('/country/IT')
-                ->withResponse(new Response(200, [], '{"id":"+39","code":"IT","name":"Italy"}'))
-                ->build(),
-        );
+        $this->mockedClient->get('/country/IT')
+            ->respondWith('{"id":"+39","code":"IT","name":"Italy"}');
 
-        $this->handlerBuilder->addRoute(
-            $this->routeBuilder->new()
-                ->withMethod('GET')
-                ->withPath('country/AU')
-                ->withResponse(new Response(200, [], '{"id":"+43","code":"AU","name":"Austria"}'))
-                ->build(),
-        );
+        $this->mockedClient->get('country/AU')
+            ->respondWith('{"id":"+43","code":"AU","name":"Austria"}');
 
-        $this->handlerBuilder->addRoute(
-            $this->routeBuilder->new()
-                ->withMethod('GET')
-                ->withPath('/country/DE/json')
-                ->withFileResponse(__DIR__ . '/fixtures/country.json')
-                ->build(),
-        );
+        $this->mockedClient->get('/country/DE/json')
+            ->respondWithFile(__DIR__ . '/fixtures/country.json');
 
-        $this->handlerBuilder->addRoute(
-            $this->routeBuilder->new()
-                ->withMethod('GET')
-                ->withPath('/admin/dashboard')
-                ->withResponse(new Response(401))
-                ->build(),
-        );
+        $this->mockedClient->get('/admin/dashboard')
+            ->respondWith('', 401);
 
-        $this->handlerBuilder->addRoute(
-            $this->routeBuilder->new()
-                ->withMethod('GET')
-                ->withPath('/slow/api')
-                ->withStringResponse('Gateway timeout', 504)
-                ->build(),
-        );
+        $this->mockedClient->get('/slow/api')
+            ->respondWith('Gateway timeout', 504);
 
-        $this->handlerBuilder->addRoute(
-            $this->routeBuilder
-                ->withMethod('GET')
-                ->withPath('/headers')
-                ->withHandler(static function (Request $request): Response {
-                    return new Response(200, [], $request->getHeaderLine('test-header'));
-                })
-                ->build(),
-        );
+        $this->mockedClient->get('/headers')
+            ->respondUsing(static function (RequestInterface $request) {
+                return new Response(200, [], $request->getHeaderLine('test-header'));
+            });
 
-        $this->handlerBuilder->addRoute(
-            $this->routeBuilder
-                ->withMethod('POST')
-                ->withPath('/body')
-                ->withHandler(static function (Request $request): Response {
-                    return new Response(200, [], $request->getBody()->getContents());
-                })
-                ->build(),
-        );
+        $this->mockedClient->post('/body')
+            ->respondUsing(static function (RequestInterface $request) {
+                return new Response(200, [], $request->getBody()->getContents());
+            });
 
-        $this->handlerBuilder->addRoute(
-            $this->routeBuilder->new()
-                ->withMethod('GET')
-                ->withPath('/middleware')
-                ->withHandler(static function (Request $request): Response {
-                    return new Response(200, [], $request->getHeader('x-name')[0]);
-                })
-                ->build(),
-        );
-
-        $clientBuilder = new ClientBuilder($this->handlerBuilder);
+        $this->mockedClient->get('/middleware')
+            ->respondUsing(static function (RequestInterface $request) {
+                return new Response(200, [], $request->getHeader('x-name')[0]);
+            });
 
         // Anonymous middleware
-        $clientBuilder->addMiddleware(new class ('x-name', 'x-value') extends Middleware {
+        $middleware = new class ('x-name', 'x-value') extends Middleware {
             public function __construct(private readonly string $header, private readonly string $value)
             {
             }
@@ -271,8 +198,8 @@ class ClientBuilderTest extends TestCase
             {
                 return $request->withHeader($this->header, $this->value);
             }
-        });
+        };
 
-        return $clientBuilder->build();
+        return $this->mockedClient->guzzleClient([$middleware]);
     }
 }

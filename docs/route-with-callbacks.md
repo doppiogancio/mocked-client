@@ -1,55 +1,30 @@
-## Route with callbacks
+## Route with a callback-matched response
+
+Respond based on any property of the request, not just the query string, by giving `respondIf()` a callback that inspects the `Psr\Http\Message\RequestInterface` and returns a boolean. Callbacks are checked in the order they're added; the first match wins.
 
 ```php
-public function testRoute(): void
-{
-    $builder = new CallbackRouteBuilder(
-        Psr17FactoryDiscovery::findResponseFactory(),
-        Psr17FactoryDiscovery::findStreamFactory(),
-    );
+use DoppioGancio\MockedClient\MockedClient;
+use Psr\Http\Message\RequestInterface;
 
-    $route = $builder->withMethod('GET')
-        ->withPath('/country')
-        ->withStringResponse(
-            $this->checkCountry('AU'),
-            '{"id":"+43","code":"AU","name":"Austria"}',
-        )
-        ->withStringResponse(
-            $this->checkCountry('IT'),
-            '{"id":"+39","code":"IT","name":"Italy"}',
-        )
-        ->build();
+$mockedClient = MockedClient::create();
 
-    // Request #1
-    $response = $route->getHandler()(new Request('GET', '/country?code=AU'));
-    assert($response instanceof ResponseInterface);
+$mockedClient->get('/country')
+    ->respondIf($this->hasCountryCode('AU'), '{"id":"+43","code":"AU","name":"Austria"}')
+    ->respondIf($this->hasCountryCode('IT'), '{"id":"+39","code":"IT","name":"Italy"}');
 
-    $this->assertEquals(200, $response->getStatusCode());
+$client = $mockedClient->guzzleClient();
 
-    $data = json_decode($response->getBody()->getContents(), true);
-    $this->assertEquals('Austria', $data['name']);
+$client->request('GET', '/country?code=AU'); // Austria
+$client->request('GET', '/country?code=IT'); // Italy
+$client->request('GET', '/country');         // throws ResponseNotFound: no callback matched
 
-    // Request #2
-    $response = $route->getHandler()(new Request('GET', '/country?code=IT'));
-    assert($response instanceof ResponseInterface);
-
-    $this->assertEquals(200, $response->getStatusCode());
-
-    $data = json_decode($response->getBody()->getContents(), true);
-    $this->assertEquals('Italy', $data['name']);
-
-    // Request #3 - Response not found
-    $this->expectException(ResponseNotFound::class);
-    $route->getHandler()(new Request('GET', '/country'));
-}
-
-/** @return callable(RequestInterface $request):bool */
-private function checkCountry(string $countryCode): callable
+/** @return callable(RequestInterface):bool */
+function hasCountryCode(string $countryCode): callable
 {
     return static function (RequestInterface $request) use ($countryCode): bool {
-        parse_str($request->getUri()->getQuery(), $requestParameters);
+        parse_str($request->getUri()->getQuery(), $parameters);
 
-        return ($requestParameters['code'] ?? '') === $countryCode;
+        return ($parameters['code'] ?? '') === $countryCode;
     };
 }
 ```

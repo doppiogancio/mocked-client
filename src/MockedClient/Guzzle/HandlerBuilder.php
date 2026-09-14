@@ -10,8 +10,6 @@ use DoppioGancio\MockedClient\Route\Route;
 use GuzzleHttp\Promise\FulfilledPromise;
 use GuzzleHttp\Promise\PromiseInterface;
 use Psr\Http\Message\RequestInterface;
-use Psr\Http\Message\ServerRequestFactoryInterface;
-use Psr\Log\LoggerInterface;
 
 /**
  * Adapts the framework agnostic RequestHandler to the Guzzle HandlerStack
@@ -19,13 +17,8 @@ use Psr\Log\LoggerInterface;
  */
 class HandlerBuilder
 {
-    private readonly RequestHandler $requestHandler;
-
-    public function __construct(
-        ServerRequestFactoryInterface $serverRequestFactory,
-        LoggerInterface $logger,
-    ) {
-        $this->requestHandler = new RequestHandler($serverRequestFactory, $logger);
+    public function __construct(private readonly RequestHandler $requestHandler)
+    {
     }
 
     public function addRoute(Route $route): self

@@ -1,38 +1,31 @@
-## Route with response from string
+## Route with a string or file response
 
 ```php
-use DoppioGancio\MockedClient\Guzzle\HandlerBuilder;
-use DoppioGancio\MockedClient\Guzzle\ClientBuilder;
-use DoppioGancio\MockedClient\Route\RouteBuilder;
-use GuzzleHttp\Psr7\Response;
-use Http\Discovery\Psr17FactoryDiscovery;
-use Psr\Log\NullLogger;
+use DoppioGancio\MockedClient\MockedClient;
 
 require_once "vendor/autoload.php";
 
-$handlerBuilder = new HandlerBuilder(
-    Psr17FactoryDiscovery::findServerRequestFactory(),
-    new NullLogger()
-);
+$mockedClient = MockedClient::create();
 
-$route = new RouteBuilder(
-    Psr17FactoryDiscovery::findResponseFactory(),
-    Psr17FactoryDiscovery::findStreamFactory(),
-);
+// Route with a string body
+$mockedClient->get('/country/FR')
+    ->respondWith(
+        content: '{"id":"+33","code":"FR","name":"France"}',
+        httpStatus: 201,
+        headers: ['content-type' => 'application/json'],
+    );
 
-// Route with String
-$handlerBuilder->addRoute(
-    $route->new()
-        ->withMethod('GET')
-        ->withPath('/country/FR')
-        ->withStringResponse(
-            content: '{"id":"+33","code":"FR","name":"France"}',
-            httpStatus: 201,
-            headers: ['content-type' => 'application/json']
-        )
-        ->build()
-);
+// ...or with a shortcut for JSON
+$mockedClient->get('/country/FR')
+    ->respondWithJson(['id' => '+33', 'code' => 'FR', 'name' => 'France'], httpStatus: 201);
 
-$clientBuilder = new ClientBuilder($handlerBuilder);
-$client = $clientBuilder->build();
+// Route with a file body
+$mockedClient->get('/country/DE')
+    ->respondWithFile(
+        file: __DIR__ . '/fixtures/country.json',
+        httpStatus: 201,
+        headers: ['content-type' => 'application/json'],
+    );
+
+$client = $mockedClient->guzzleClient();
 ```
