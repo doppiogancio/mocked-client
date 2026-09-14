@@ -5,16 +5,15 @@ declare(strict_types=1);
 namespace DoppioGancio\MockedClient\Route;
 
 use Closure;
+use DoppioGancio\MockedClient\Route\Exception\FileNotFound;
 use DoppioGancio\MockedClient\Route\Exception\IncompleteRoute;
 use Psr\Http\Message\MessageInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 
-use function assert;
 use function fopen;
 use function is_resource;
-use function sprintf;
 
 abstract class Builder
 {
@@ -58,11 +57,18 @@ abstract class Builder
         return $message;
     }
 
-    /** @param array<string, string|string[]> $headers */
+    /**
+     * @param array<string, string|string[]> $headers
+     *
+     * @throws FileNotFound
+     */
     protected function buildResponseFromFile(string $file, int $httpStatus, array $headers): ResponseInterface
     {
-        $fp = fopen($file, 'rb');
-        assert(is_resource($fp), sprintf('File not found: %s', $file));
+        $fp = @fopen($file, 'rb');
+        if (! is_resource($fp)) {
+            throw new FileNotFound($file);
+        }
+
         $response = $this->responseFactory
             ->createResponse($httpStatus)
             ->withBody($this->streamFactory->createStreamFromResource($fp));

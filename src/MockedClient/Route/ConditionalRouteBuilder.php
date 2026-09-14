@@ -6,7 +6,6 @@ namespace DoppioGancio\MockedClient\Route;
 
 use Closure;
 use DoppioGancio\MockedClient\Route\Exception\IncompleteRoute;
-use GuzzleHttp\Psr7\Response;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 
@@ -105,7 +104,7 @@ class ConditionalRouteBuilder extends Builder
                 }
             }
 
-            return $this->defaultResponse ?? new Response(404);
+            return $this->defaultResponse ?? $this->responseFactory->createResponse(404);
         };
     }
 }

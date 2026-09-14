@@ -1,8 +1,8 @@
 ## Route with response from file
 
 ```php
-use DoppioGancio\MockedClient\HandlerBuilder;
-use DoppioGancio\MockedClient\ClientBuilder;
+use DoppioGancio\MockedClient\Guzzle\HandlerBuilder;
+use DoppioGancio\MockedClient\Guzzle\ClientBuilder;
 use DoppioGancio\MockedClient\Route\RouteBuilder;
 use GuzzleHttp\Psr7\Response;
 use Http\Discovery\Psr17FactoryDiscovery;

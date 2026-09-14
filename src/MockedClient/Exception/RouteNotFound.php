@@ -6,10 +6,11 @@ namespace DoppioGancio\MockedClient\Exception;
 
 use DoppioGancio\MockedClient\Route\Route;
 use Exception;
+use Psr\Http\Client\ClientExceptionInterface;
 
 use function sprintf;
 
-class RouteNotFound extends Exception
+class RouteNotFound extends Exception implements ClientExceptionInterface
 {
     /** @param Route[] $routes */
     public function __construct(string $method, string $path, array $routes = [])
