@@ -1,60 +1,50 @@
 # Changelog
 
-## v5.0.0 (unreleased)
+## v5.0.0-beta.1 (2026-09-15)
 
-### New primary API: `MockedClient` + `RouteExpectation`
-The four separate route builders and the `HandlerBuilder`/`ClientBuilder` bootstrapping are replaced by a single facade and a single fluent response object:
+A rewrite of the public API around two objects, plus the request journal the package never had. See [docs/90-upgrading-from-v4.md](./docs/90-upgrading-from-v4.md) for a method by method migration table.
 
-```php
-// v4
-$handlerBuilder = new HandlerBuilder(Psr17FactoryDiscovery::findServerRequestFactory(), new NullLogger());
-$routeBuilder   = new RouteBuilder(Psr17FactoryDiscovery::findResponseFactory(), Psr17FactoryDiscovery::findStreamFactory());
-$handlerBuilder->addRoute(
-    $routeBuilder->new()->withMethod('GET')->withPath('/country/IT')
-        ->withResponse(new Response(200, [], '{"code":"IT"}'))
-        ->build()
-);
-$client = (new ClientBuilder($handlerBuilder))->build();
-
-// v5
-$mockedClient = MockedClient::create();
-$mockedClient->get('/country/IT')->respondWith('{"code":"IT"}');
-$client = $mockedClient->guzzleClient();
-```
-
-`RouteExpectation` (returned by `get()`/`post()`/`put()`/`patch()`/`delete()`/`on()`) merges what used to be four mutually exclusive builders into one object that can combine all these behaviours on the same route:
-- `respondWith()` / `respondWithJson()` / `respondWithFile()` / `respondWithResponse()`: call once for a static response, call more than once to queue consecutive responses (each call consumes the next one; `TooManyConsecutiveCalls` is thrown once exhausted).
-- `respondWhen()` / `respondWhenFile()` / `respondWhenResponse()`: respond based on the request's query string (replaces `ConditionalRouteBuilder`). A plain `respondWith*()` call acts as the fallback.
-- `respondIf()` / `respondIfFile()` / `respondIfResponse()`: respond based on a callback matching the request (replaces `CallbackRouteBuilder`).
-- `respondUsing(Closure $handler)`: full escape hatch (replaces `RouteBuilder::withHandler()`).
-
-`MockedClient::guzzleClient()` and `MockedClient::psr18Client()` build a mocked Guzzle client and a dependency-free PSR-18 client from the exact same set of routes.
-
-### Breaking changes
-- Minimum PHP version raised from 8.1 to 8.2.
-- Removed `DoppioGancio\MockedClient\Route\RouteBuilder`, `ConditionalRouteBuilder`, `ConsecutiveCallsRouteBuilder`, `CallbackRouteBuilder`, `Builder`, `CallbackRouteHandler`, `ConsecutiveCallsRouteHandler`, and the unused, empty `RouteBuilderFacade`. Use `MockedClient` + `RouteExpectation` instead (see above).
-- Removed `DoppioGancio\MockedClient\Route\Exception\IncompleteRoute` (no longer applicable: `MockedClient::on($method, $path)` always requires both upfront).
-- `DoppioGancio\MockedClient\HandlerBuilder` moved to `DoppioGancio\MockedClient\Guzzle\HandlerBuilder`, and now wraps a `RequestHandler` instance instead of a `ServerRequestFactoryInterface`/`LoggerInterface` pair: `new Guzzle\HandlerBuilder($requestHandler)`.
-- `DoppioGancio\MockedClient\Psr18\Client` likewise now takes a `RequestHandler`: `new Psr18\Client($requestHandler)`.
-- A missing file passed to `respondWithFile()` (formerly `withFileResponse()`) now throws `DoppioGancio\MockedClient\Route\Exception\FileNotFound` instead of relying on `assert()`, which is silently skipped when `zend.assertions` is disabled (the default in production).
-- A `RouteExpectation` built only with `respondWhen*()`/`respondIf*()` and no fallback now throws `ResponseNotFound` when nothing matches, instead of `ConditionalRouteBuilder`'s old silent `404` default.
-- `league/route` bumped from `^5.1` to `^6.2` (internal implementation detail, not part of the public API; `^7.0` was considered but requires PHP 8.3+, incompatible with this package's PHP 8.2 minimum).
+> **This is a beta.** The API described below is what v5.0.0 is meant to ship, but it is not frozen yet: feedback that would change it is welcome while this tag is the latest. Composer will not install it unless you ask for it explicitly or set `minimum-stability` to `beta`.
 
 ### Added
-- `DoppioGancio\MockedClient\MockedClient`: the new facade described above.
-- `DoppioGancio\MockedClient\RouteExpectation`: the new fluent per-route response builder described above.
-- `DoppioGancio\MockedClient\RequestHandler`: a framework-agnostic core that turns a PSR-7 request into the PSR-7 response of the matching mocked route, with no dependency on Guzzle.
-- `DoppioGancio\MockedClient\Psr18\Client`: a dependency-free `Psr\Http\Client\ClientInterface` implementation for mocking any PSR-18 consumer, not just Guzzle.
-- `DoppioGancio\MockedClient\Exception\RouteNotFound` now implements `Psr\Http\Client\ClientExceptionInterface`.
-- `psr/http-client` added as an explicit dependency.
+
+- `MockServer`: the entry point. Describes a fake server with stubs and hands it out as a PSR-18, Guzzle, HTTPlug or Symfony client, all sharing the same stubs and journal.
+- `MockResponse`: every kind of answer a stub can give, as orthogonal factories: `text()`, `json()`, `file()`, `status()`, `psr7()`, `using()`, `sequence()` and `failure()`.
+- Matching split from responding. `whereQuery()`, `whereHeader()`, `whereJson()` and `whereCallback()` combine freely with any response, instead of the previous grid of twelve `respondWith*()`/`respondWhen*()`/`respondIf*()` methods that still had gaps in it.
+- Matching on request headers and on the JSON request body, neither of which was possible declaratively before.
+- `MockResponse::failure()` simulates a transport error as a `Psr\Http\Client\NetworkExceptionInterface`, for testing retries, backoff and circuit breakers.
+- The request journal: `recorded()`, `lastRequest()`, `journal()`, and the assertions `assertRequested()`, `assertNotRequested()`, `assertRequestedTimes()` and `assertAllStubsUsed()`.
+- HTTPlug adapter (`MockServer::httplug()`) and a Symfony HttpClient bridge (`MockServer::symfonyCallback()`).
+- `Exception\MockedClientException`, a marker interface implemented by every exception the package throws.
+- `RequestNotMatched` prints the request as received and, for every registered stub, the reason it did not match.
 
 ### Fixed
-- The default response for an unmatched conditional route is now built via the injected PSR-17 `ResponseFactoryInterface` instead of instantiating `GuzzleHttp\Psr7\Response` directly, removing a stray Guzzle coupling in otherwise client-agnostic code.
-- The relative request URI is no longer built with `GuzzleHttp\Psr7\Uri`; it's done with plain string handling against the PSR-7 `UriInterface` already on the request.
 
-### CI / tooling
-- GitHub Actions now runs on PHP 8.2, 8.3 and 8.4, and also on pull requests.
-- PHPStan bumped to `^2.2`.
+- **PSR-18 conformance.** `ResponseNotFound` and `TooManyConsecutiveCalls` were thrown from inside `sendRequest()` without implementing `ClientExceptionInterface`, so `catch (ClientExceptionInterface $e)` in the code under test did not catch them. Every exception raised while answering a request now implements it.
+- **Responses are no longer shared between calls.** The same response instance, and therefore the same already consumed body stream, was handed out on every request: the second `getBody()->getContents()` returned an empty string. Each request now gets a freshly built response.
+- **The router is no longer rebuilt on every request.** A new `League\Route\Router` was instantiated and every route remapped for each call.
+
+### Changed
+
+- `league/route` removed. Path placeholders (`/country/{code}`, `/orders/{id:\d+}`) are matched by an internal `PathPattern`. This also drops `nikic/fast-route`, `psr/http-server-handler`, `psr/http-server-middleware` and `laravel/serializable-closure`, and removes the need for a PSR-17 `ServerRequestFactoryInterface`.
+- `php-http/discovery` moved from `require-dev` to `require`: `MockServer::create()` depends on it, so the documented entry point used to fatal on a fresh install.
+- Stubs are tried in registration order, first match wins. The old fixed precedence (callbacks, then query conditions, then the default) is gone.
+- Sequences are explicit. Calling the response method twice no longer silently turns a stub into a queue; use `MockResponse::sequence()`.
+- A request that matches no stub throws `RequestNotMatched` instead of answering a silent 404.
+
+### Removed
+
+- `RouteBuilder`, `ConditionalRouteBuilder`, `ConsecutiveCallsRouteBuilder`, `CallbackRouteBuilder`, `Builder`, `RouteBuilderFacade`, `CallbackRouteHandler`, `ConsecutiveCallsRouteHandler`.
+- `HandlerBuilder`, `Guzzle\ClientBuilder`, `Psr18\Client`, `RequestHandler`, `RouteExpectation`, `MockedClient`, `Route\Route`.
+- `Route\Exception\IncompleteRoute`, replaced by `Exception\IncompleteStub`.
+
+`Guzzle\Middleware\Middleware` is unchanged and still the base class for Guzzle middlewares.
+
+### CI and tooling
+
+- GitHub Actions runs on PHP 8.2, 8.3, 8.4 and 8.5, on pushes and pull requests.
+- Minimum PHP stays at 8.2.
 
 ## v4.1.4 and earlier
-See git history.
+
+See the git history.

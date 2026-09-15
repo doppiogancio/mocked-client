@@ -1,129 +1,268 @@
-[![Packagist Version](https://img.shields.io/packagist/v/doppiogancio/mocked-client)](https://packagist.org/packages/doppiogancio/mocked-client)
-[![Packagist Downloads](https://img.shields.io/packagist/dm/doppiogancio/mocked-client)](https://packagist.org/packages/doppiogancio/mocked-client)
+<div align="center">
 
 # Mocked Client
-This package helps test components that depend on an HTTP client. Define your mocked routes once, then get either a mocked Guzzle client or a plain PSR-18 client out of them.
+
+**Test the code that talks to an HTTP API, without the HTTP API.**
+
+Describe a fake server once, hand it to the code under test as whatever client it expects: PSR-18, Guzzle, HTTPlug or Symfony.
+
+[![Packagist Version](https://img.shields.io/packagist/v/doppiogancio/mocked-client?style=flat-square&color=4c1)](https://packagist.org/packages/doppiogancio/mocked-client)
+[![Packagist Downloads](https://img.shields.io/packagist/dm/doppiogancio/mocked-client?style=flat-square)](https://packagist.org/packages/doppiogancio/mocked-client)
+[![PHP Version](https://img.shields.io/packagist/dependency-v/doppiogancio/mocked-client/php?style=flat-square)](https://packagist.org/packages/doppiogancio/mocked-client)
+[![Build](https://img.shields.io/github/actions/workflow/status/doppiogancio/mocked-client/github-actions.yml?branch=main&style=flat-square)](https://github.com/doppiogancio/mocked-client/actions)
+[![PHPStan](https://img.shields.io/badge/PHPStan-level%208-4c1?style=flat-square)](https://phpstan.org/)
+[![Licence](https://img.shields.io/packagist/l/doppiogancio/mocked-client?style=flat-square)](./LICENCE.md)
+
+</div>
+
+---
+
+```php
+$mock = MockServer::create();
+
+$mock->get('/country/IT')->reply(MockResponse::json(['code' => 'IT', 'name' => 'Italy']));
+
+$client = $mock->guzzle();   // a real GuzzleHttp\Client, answering from your stubs
+```
+
+Anything you did not stub fails immediately, with a message that names the request and tells you why every stub refused it. Your tests end up describing exactly the traffic they depend on, and nothing else.
+
+## Contents
+
+- [Why this library](#why-this-library)
+- [Install](#install)
+- [A complete example](#a-complete-example)
+- [How it works](#how-it-works)
+- [Matching a request](#matching-a-request)
+- [Building a response](#building-a-response)
+- [Checking what was requested](#checking-what-was-requested)
+- [Choosing a client](#choosing-a-client)
+- [Failing fast](#failing-fast)
+- [Documentation](#documentation)
+
+## Why this library
+
+Most HTTP mocks are a **queue**: you push responses and they come back in order, so your test silently depends on how many calls your code makes and in which sequence. Refactor the code, break the test.
+
+This one is a **router**. You describe endpoints, the way the real API is described, and the order of calls stops mattering.
+
+|  | Guzzle `MockHandler` | `php-http/mock-client` | Symfony `MockHttpClient` | **Mocked Client** |
+| --- | --- | --- | --- | --- |
+| How a response is chosen | a queue, consumed in call order | a queue, consumed in call order | a queue, or a callback you write | **routed by the request** |
+| Order of calls matters | yes | yes | with the queue form | **no** |
+| Path placeholders | hand rolled | hand rolled | hand rolled | **built in** |
+| Match on query, headers, JSON body | hand rolled | hand rolled | hand rolled | **built in** |
+| Records requests for assertions | via the history middleware | yes | yes | **yes** |
+| Simulates transport failures | yes | yes | yes | **yes** |
+| Clients it can back | Guzzle, and PSR-18 through it | PSR-18, HTTPlug | Symfony | **PSR-18, Guzzle, HTTPlug, Symfony** |
+
+If your project uses one HTTP client and always will, the native mock of that client is a perfectly good answer, and it is one less dependency. This package earns its place when you want to describe an API rather than a call sequence, or when different parts of your codebase reach for different clients.
 
 ## Install
-Via Composer
 
 ```shell
-$ composer require doppiogancio/mocked-client php-http/discovery
+composer require --dev doppiogancio/mocked-client
 ```
 
-Add Guzzle only if you use the Guzzle integration:
+You also need a PSR-7 implementation, if your project does not already have one:
 
 ```shell
-$ composer require guzzlehttp/guzzle
+composer require --dev nyholm/psr7
 ```
 
-## Requirements
-This version requires a minimum PHP version 8.2
+Guzzle, HTTPlug and Symfony HttpClient are needed only for their respective adapters. Requires **PHP 8.2** or later.
 
-## How to mock a client
+## A complete example
+
+A service that fetches a country, and the test that pins its behaviour:
 
 ```php
-use DoppioGancio\MockedClient\MockedClient;
+final class CountryApi
+{
+    public function __construct(private readonly ClientInterface $client) {}
 
-$mockedClient = MockedClient::create();
+    public function find(string $code): array
+    {
+        $request = new Request('GET', 'https://api.example.com/country/' . $code);
 
-$mockedClient->get('/country/IT')
-    ->respondWithJson(['id' => '+39', 'code' => 'IT', 'name' => 'Italy']);
-
-$client = $mockedClient->guzzleClient();
+        return json_decode((string) $this->client->sendRequest($request)->getBody(), true);
+    }
+}
 ```
-
-That's it: `$client` is a real `GuzzleHttp\Client` that answers `GET /country/IT` with the JSON above, and throws `DoppioGancio\MockedClient\Exception\RouteNotFound` for anything else. `MockedClient::create()` discovers the PSR-17 factories for you via `php-http/discovery`; use `new MockedClient($responseFactory, $streamFactory)` if you want to provide your own.
-
-## How to use the client
-```php
-$response = $client->request('GET', '/country/IT');
-$body = (string) $response->getBody();
-$country = json_decode($body, true);
-
-print_r($country);
-
-// will return
-Array
-(
-    [id] => +39
-    [code] => IT
-    [name] => Italy
-)
-```
-
-## Defining routes: one object, every mocking style
-`get()`/`post()`/`put()`/`patch()`/`delete()` (and `on($method, $path)` for anything else) return a `RouteExpectation`. Combine as many of these as you need on the same route:
 
 ```php
-$mockedClient->get('/country')
-    // a query string that must match wins first
-    ->respondWhen('code=it', '{"id":"+39","code":"IT","name":"Italy"}')
-    ->respondWhen('code=de', '{"id":"+49","code":"DE","name":"Germany"}')
-    // otherwise, this is the fallback
-    ->respondWithFile(__DIR__ . '/fixtures/countries.json');
+final class CountryApiTest extends TestCase
+{
+    public function testItFetchesACountry(): void
+    {
+        $mock = MockServer::create();
+        $mock->get('/country/{code}')->reply(MockResponse::file(__DIR__ . '/fixtures/country.json'));
+
+        $country = (new CountryApi($mock->psr18()))->find('IT');
+
+        $this->assertSame('Italy', $country['name']);
+        $mock->assertRequested('GET', '/country/IT');
+    }
+
+    public function testItRetriesOnAFlakyConnection(): void
+    {
+        $mock = MockServer::create();
+        $mock->get('/country/{code}')->reply(MockResponse::sequence(
+            MockResponse::failure('connection reset'),
+            MockResponse::failure('connection reset'),
+            MockResponse::json(['code' => 'IT', 'name' => 'Italy']),
+        ));
+
+        $country = (new ResilientCountryApi($mock->psr18()))->find('IT');
+
+        $this->assertSame('Italy', $country['name']);
+        $mock->assertRequestedTimes(3, 'GET', '/country/IT');
+    }
+}
 ```
 
-1. [Respond with a string or a file](./docs/route-with-string-response.md)
-2. [Respond only when the query string matches](./docs/route-with-conditional-response.md)
-3. [Respond only when a callback matches the request](./docs/route-with-callbacks.md)
-4. [Respond with a different value on each consecutive call](./docs/route-with-consecutive-calls.md)
-5. [Guzzle client with middlewares](./docs/guzzle-client-with-middlewares.md)
+Note what the second test does: `MockResponse::failure()` throws a real `NetworkExceptionInterface`, the same thing a broken connection produces, so the retry loop is exercised rather than simulated.
 
-Need full control over the response? `respondUsing(Closure $handler)` gets the incoming PSR-7 request and builds the response yourself:
+## How it works
+
+A stub is **one matcher chain** plus **one response**. The two are independent, so any matcher combines with any response:
 
 ```php
-$mockedClient->get('/echo-header')
-    ->respondUsing(fn ($request) => $responseFactory
-        ->createResponse(200)
-        ->withBody($streamFactory->createStream($request->getHeaderLine('x-request-id'))));
+$mock->post('/orders')                          // method and path
+     ->whereHeader('authorization', 'Bearer t') // narrow it
+     ->whereJson(['sku' => 'ABC'])              // narrow it further
+     ->reply(MockResponse::status(201));        // and answer
 ```
 
-## Mocking a plain PSR-18 client (no Guzzle required)
-If the code under test only depends on `Psr\Http\Client\ClientInterface`, skip Guzzle entirely — same `MockedClient`, same routes:
+Stubs are tried **in registration order, first match wins**. There is no hidden priority: the order you read is the order that applies, so the general case goes last.
 
 ```php
-$mockedClient = MockedClient::create();
-$mockedClient->get('/country/IT')->respondWithJson(['code' => 'IT']);
-
-$client = $mockedClient->psr18Client();
-
-$response = $client->sendRequest($requestFactory->createRequest('GET', '/country/IT'));
+$mock->get('/country')->whereQuery(['code' => 'it'])->reply(MockResponse::json($italy));
+$mock->get('/country')->whereQuery(['code' => 'de'])->reply(MockResponse::json($germany));
+$mock->get('/country')->reply(MockResponse::file(__DIR__ . '/fixtures/countries.json'));
 ```
 
-You can even get both a Guzzle client and a PSR-18 client backed by the exact same routes from a single `MockedClient` instance.
+## Matching a request
 
-## Some recommendations...
-### Fail Fast, Fail Often
-If you don't know in advance which routes are needed, don't worry: start with a client with no routes and let it tell you which one is missing.
+| Method | Matches when |
+| --- | --- |
+| `get()` `post()` `put()` `patch()` `delete()` `head()` `options()` `on()` | the method and path match. Paths accept placeholders: `/country/{code}`, `/orders/{id:\d+}` |
+| `whereQuery(['code' => 'it'])` or `whereQuery('code=it&page=2')` | the query string contains at least these parameters |
+| `whereHeader('authorization', 'Bearer t')` | the header has this value. Omit the value to only require its presence |
+| `whereJson(['sku' => 'ABC'])` | the JSON body contains at least these keys, nested ones included |
+| `whereCallback(fn (RequestInterface $r) => ...)` | your callback returns true |
+
+Every `where*()` is a **subset** check, so a request may carry extra parameters, headers or JSON keys. A test pins the one thing it cares about and stays readable when the payload grows.
+
+The host is ignored, so the same stubs work whether your code calls `/country` or `https://api.example.com/country`.
+
+[Full reference](./docs/01-matching.md)
+
+## Building a response
+
+| Factory | Produces |
+| --- | --- |
+| `MockResponse::text('hi', 201, ['x-a' => 'b'])` | a plain body |
+| `MockResponse::json(['code' => 'IT'])` | a JSON body, with `content-type` set for you |
+| `MockResponse::file(__DIR__ . '/fixtures/c.json')` | a body read from a fixture |
+| `MockResponse::status(204)` | a status code and nothing else |
+| `MockResponse::psr7($response)` | a PSR-7 response you already have |
+| `MockResponse::using(fn ($request) => ...)` | a response built from the request |
+| `MockResponse::sequence($a, $b, $c)` | a different response on each consecutive call |
+| `MockResponse::failure('timed out')` | a simulated transport error, for testing retries |
+
+Every response is rebuilt for each request, body stream included, so an endpoint called twice hands out two fully readable responses.
+
+[Full reference](./docs/02-responses.md)
+
+## Checking what was requested
+
+Stubbing says what the server answers. The journal says what your code actually asked:
+
 ```php
-$mockedClient = MockedClient::create();
-// don't add any route for now...
-$client = $mockedClient->guzzleClient();
+$mock->assertRequested('POST', '/orders');
+$mock->assertRequestedTimes(3, 'GET', '/country/{code}');
+$mock->assertNotRequested('DELETE', '/orders/1');
+$mock->assertAllStubsUsed();
 ```
 
-Run the test: it will fail, but the exception tells you exactly which route to add — so you only ever define the routes you actually need.
+Assertions accept the same placeholders as stubs, so `'/country/{code}'` counts every country and `'/country/IT'` counts only that one. `assertAllStubsUsed()` catches the opposite problem: a stub written and never exercised, which usually means the test has drifted from the code.
 
-An example:
+When an assertion is not expressive enough, read the journal:
+
+```php
+$sent = $mock->recorded('POST', '/orders')[0];
+
+$sent->jsonBody();                // ['sku' => 'ABC', 'qty' => 2]
+$sent->header('content-type');    // 'application/json'
+$sent->response?->getStatusCode();
+```
+
+[Full reference](./docs/04-assertions.md)
+
+## Choosing a client
+
+One server, every flavour. They all share the same stubs and the same journal, so you can hand a Guzzle client to one collaborator and a PSR-18 client to another in the same test.
+
+```php
+$mock->psr18();          // Psr\Http\Client\ClientInterface
+$mock->guzzle();         // GuzzleHttp\Client, with optional middlewares and client options
+$mock->guzzleHandler();  // a handler for a HandlerStack you build yourself
+$mock->httplug();        // Http\Client\HttpAsyncClient
+$mock->handle($request); // PSR-7 in, PSR-7 out, no client at all
+
+// Symfony's own MockHttpClient does the response building
+new Symfony\Component\HttpClient\MockHttpClient($mock->symfonyCallback());
+```
+
+Every exception raised while answering a request implements `Psr\Http\Client\ClientExceptionInterface`, as PSR-18 requires, so `catch (ClientExceptionInterface $e)` in the code under test behaves exactly as it would against a real client.
+
+[Full reference](./docs/05-clients.md)
+
+## Failing fast
+
+You do not have to know which endpoints your code calls. Write no stubs, run the test, and read the failure:
+
+```
+No stub matched POST /orders
+
+Request as received:
+  POST /orders?dry=1
+  content-type: application/json
+  {"sku":"ABC","qty":2}
+
+3 stub(s) registered:
+  GET  /orders       method is GET, not POST
+  POST /orders       query is missing "dry"
+  POST /orders/{id}  path does not match "/orders/{id}"
+```
+
+It prints the request as received and, for each stub, the precise reason it refused. Add the stub it asks for and repeat, so you only ever write the stubs you actually need.
+
+## Documentation
+
+| | |
+| --- | --- |
+| [1. Matching requests](./docs/01-matching.md) | placeholders, query, headers, JSON body, callbacks |
+| [2. Building responses](./docs/02-responses.md) | strings, JSON, fixtures, PSR-7, dynamic responses |
+| [3. Sequences and failures](./docs/03-sequences.md) | consecutive calls, simulated transport errors |
+| [4. Asserting requests](./docs/04-assertions.md) | the journal and the assertions |
+| [5. Clients and adapters](./docs/05-clients.md) | PSR-18, Guzzle, HTTPlug, Symfony, containers |
+| [6. Recipes](./docs/06-recipes.md) | retries, pagination, auth tokens, error handling |
+| [7. Upgrading from v4](./docs/90-upgrading-from-v4.md) | the v5 migration table |
+
+## Contributing
+
+Issues and pull requests are welcome. Before opening one:
+
 ```shell
-DoppioGancio\MockedClient\Exception\RouteNotFound: Mocked route GET /admin/dashboard not found
+composer code-review   # fixes the coding standard, then runs PHPStan and the tests
 ```
 
-### Inject the client in the service container
-If you have a service container, add the client to it, so that every service depending on it will be able to auto wire.
-```php
-self::$container->set(Client::class, $client);
+The suite must stay green on every supported PHP version, PHPStan runs at level 8, and the coding standard is [Doctrine](https://github.com/doctrine/coding-standard). Examples printed in the documentation are executed in CI, so they cannot drift from the code.
 
-// In Symfony
-self::$container->set('eight_points_guzzle.client.my_client', $client);
-```
+## Licence
 
-## Advanced: embedding the core in your own wiring
-`MockedClient` is a thin facade over a few independent pieces you can use directly if you need to:
-- `DoppioGancio\MockedClient\RequestHandler`: framework-agnostic core, turns a PSR-7 request into a PSR-7 response, no Guzzle dependency.
-- `DoppioGancio\MockedClient\Guzzle\HandlerBuilder` / `Guzzle\ClientBuilder`: adapt a `RequestHandler` to a Guzzle `HandlerStack`/`Client`.
-- `DoppioGancio\MockedClient\Psr18\Client`: adapt a `RequestHandler` to `Psr\Http\Client\ClientInterface` directly.
-- `DoppioGancio\MockedClient\RouteExpectation`: the fluent response builder returned by `MockedClient::get()` and friends; construct it yourself if you're building routes outside of `MockedClient`.
+MIT. See [LICENCE.md](./LICENCE.md).
 
-## Upgrading from v4 to v5
-v5 is a breaking release that replaces the four separate route builders (`RouteBuilder`, `ConditionalRouteBuilder`, `ConsecutiveCallsRouteBuilder`, `CallbackRouteBuilder`) and the `HandlerBuilder`/`ClientBuilder` bootstrapping with the `MockedClient` facade and `RouteExpectation` described above. See [CHANGELOG.md](./CHANGELOG.md) for the full list of changes and a side-by-side migration example.
+Built by [Fabrizio Gargiulo](https://github.com/doppiogancio).
