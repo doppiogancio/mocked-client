@@ -2,9 +2,9 @@
 
 # Mocked Client
 
-**Test the code that talks to an HTTP API, without the HTTP API.**
+**Describe a server. Get any client.**
 
-Describe a fake server once, hand it to the code under test as whatever client it expects: PSR-18, Guzzle, HTTPlug or Symfony.
+Test the code that talks to an HTTP API, without the HTTP API. You describe the endpoints once, then take the client the code under test expects: PSR-18, Guzzle, HTTPlug or Symfony.
 
 [![Packagist Version](https://img.shields.io/packagist/v/doppiogancio/mocked-client?style=flat-square&color=4c1)](https://packagist.org/packages/doppiogancio/mocked-client)
 [![Packagist Downloads](https://img.shields.io/packagist/dm/doppiogancio/mocked-client?style=flat-square)](https://packagist.org/packages/doppiogancio/mocked-client)
@@ -23,12 +23,15 @@ Describe a fake server once, hand it to the code under test as whatever client i
 ---
 
 ```php
+// describe the server...
 $mock = MockServer::create();
-
 $mock->get('/country/IT')->reply(MockResponse::json(['code' => 'IT', 'name' => 'Italy']));
 
-$client = $mock->guzzle();   // a real GuzzleHttp\Client, answering from your stubs
+// ...then take the client your code expects
+$client = $mock->guzzle();   // or ->psr18(), ->httplug(), ->symfonyCallback()
 ```
+
+That is the whole model, and it is why the class is called `MockServer` while the package is called mocked client: you describe **one** server, and it hands out **as many clients as you need**, all answering from the same stubs and recording to the same journal.
 
 Anything you did not stub fails immediately, with a message that names the request and tells you why every stub refused it. Your tests end up describing exactly the traffic they depend on, and nothing else.
 

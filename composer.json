@@ -1,6 +1,6 @@
 {
     "name": "doppiogancio/mocked-client",
-    "description": "A simple way to mock a client",
+    "description": "Describe a mocked HTTP server once, then test against it with any client: PSR-18, Guzzle, HTTPlug or Symfony",
     "type": "library",
     "license": "MIT",
     "keywords": [
@@ -9,6 +9,11 @@
         "client",
         "testing",
         "guzzle",
+        "psr-18",
+        "psr-7",
+        "httplug",
+        "symfony",
+        "phpunit",
         "php"
     ],
     "require": {
