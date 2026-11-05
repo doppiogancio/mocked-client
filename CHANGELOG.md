@@ -1,10 +1,10 @@
 # Changelog
 
-## v5.0.0-beta.1 (2026-09-15)
+## v5.0.0 (2026-11-05)
 
 A rewrite of the public API around two objects, plus the request journal the package never had. See [docs/90-upgrading-from-v4.md](./docs/90-upgrading-from-v4.md) for a method by method migration table.
 
-> **This is a beta.** The API described below is what v5.0.0 is meant to ship, but it is not frozen yet: feedback that would change it is welcome while this tag is the latest. Composer will not install it unless you ask for it explicitly or set `minimum-stability` to `beta`.
+First stable release of v5. The API is unchanged from v5.0.0-beta.1 (2026-09-15).
 
 ### Added
 

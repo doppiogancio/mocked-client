@@ -15,10 +15,8 @@ Test the code that talks to an HTTP API, without the HTTP API. You describe the 
 
 </div>
 
-> [!IMPORTANT]
-> **This README documents v5, which is currently in beta.**
-> The stable release is **v4.1.4**, and that is what `composer require doppiogancio/mocked-client` installs today. Its documentation lives in the [v4.1.4 tag](https://github.com/doppiogancio/mocked-client/tree/v4.1.4).
-> To try v5: `composer require --dev doppiogancio/mocked-client:^5.0@beta`. Coming from v4? Start with the [upgrade guide](./docs/90-upgrading-from-v4.md).
+> [!NOTE]
+> **This README documents v5.** Coming from v4? Start with the [upgrade guide](./docs/90-upgrading-from-v4.md). The v4 documentation lives in the [v4.1.4 tag](https://github.com/doppiogancio/mocked-client/tree/v4.1.4).
 
 ---
 
@@ -68,10 +66,8 @@ If your project uses one HTTP client and always will, the native mock of that cl
 
 ## Install
 
-While v5 is in beta, ask for it explicitly, otherwise Composer resolves to the v4.1.4 stable and none of this README applies:
-
 ```shell
-composer require --dev doppiogancio/mocked-client:^5.0@beta
+composer require --dev doppiogancio/mocked-client
 ```
 
 You also need a PSR-7 implementation, if your project does not already have one:
