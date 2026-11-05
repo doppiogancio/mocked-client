@@ -1,10 +1,7 @@
 parameters:
     level: 8
-    checkMissingIterableValueType: false
     paths:
         - src/
         - tests/
-    ignoreErrors:
-    		- '#Call to an undefined method#'
 includes:
     - vendor/phpstan/phpstan/conf/bleedingEdge.neon

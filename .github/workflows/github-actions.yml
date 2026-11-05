@@ -1,17 +1,27 @@
 name: Code review
-on: [push]
+on:
+  push:
+  pull_request:
 jobs:
   code-review:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: ['8.2', '8.3', '8.4', '8.5']
+    name: PHP ${{ matrix.php-version }}
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Composer version
-        run: cd ${{ github.workspace }}
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          coverage: none
 
       - name: Composer dependencies
-        run: composer install --no-ansi --no-interaction --no-scripts --no-suggest --no-progress --prefer-dist
+        run: composer install --no-ansi --no-interaction --no-progress --prefer-dist
 
       - name: Run phpstan
         run: ./vendor/bin/phpstan

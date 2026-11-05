@@ -7,18 +7,18 @@ namespace DoppioGancio\MockedClient\Guzzle\Middleware;
 use GuzzleHttp\Promise\PromiseInterface;
 use Psr\Http\Message\RequestInterface;
 
+/** Base class for the Guzzle middlewares you push onto MockServer::guzzle(). */
 class Middleware
 {
     protected RequestInterface $request;
 
     public function __invoke(callable $handler): callable
     {
-        return function (RequestInterface $request, array $options) use ($handler) {
+        /** @param array<string, mixed> $options */
+        return function (RequestInterface $request, array $options) use ($handler): PromiseInterface {
             $this->request = $this->mapRequest($request);
 
-            $response = $handler($this->request, $options);
-
-            return $this->mapResponse($response);
+            return $this->mapResponse($handler($this->request, $options));
         };
     }
 
